@@ -3,7 +3,6 @@ import { Alert, AlertsResp, CapaRow, days, fD, fDT, nf, send, usd, WorkOrder } f
 import { useLive, useLiveFetch } from "../live";
 import type { Page } from "../App";
 import { Info, Panel, Prio, StatusChip, Tag, Tile } from "../components/ui";
-import { Kpi } from "../components/icons";
 
 type Show = "open" | "all";
 const WO_STATES: WorkOrder["status"][] = ["Open", "Dikerjakan", "Selesai"];
@@ -59,12 +58,12 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
       </div>
 
       <div className="tiles">
-        <Tile icon={<Kpi.alert />} label="P1 terbuka" value={k.alerts.P1} ctx="SLA 24 jam" tone={k.alerts.P1 ? "warn" : undefined} />
-        <Tile icon={<Kpi.alert />} label="P2 terbuka" value={k.alerts.P2} ctx="SLA 7 hari" />
-        <Tile icon={<Kpi.alert />} label="P3 terbuka" value={k.alerts.P3} ctx="SLA 7 hari" />
-        <Tile icon={<Kpi.risk />} label="Nilai risiko" value={usd(k.varUsd)} ctx="P(gagal) × kerugian trip" />
-        <Tile icon={<Kpi.clock />} label="SLA terlewat" value={k.overdue} ctx="tanpa ack / WO / intervensi" tone={k.overdue ? "warn" : undefined} />
-        <Tile icon={<Kpi.list />} teal label="Work order aktif" value={activeWo} ctx={`${(data?.workorders ?? []).length} dibuat`} />
+        <Tile label="P1 terbuka" value={k.alerts.P1} ctx="SLA 24 jam" tone={k.alerts.P1 ? "warn" : undefined} />
+        <Tile label="P2 terbuka" value={k.alerts.P2} ctx="SLA 7 hari" />
+        <Tile label="P3 terbuka" value={k.alerts.P3} ctx="SLA 7 hari" />
+        <Tile label="Nilai risiko" value={usd(k.varUsd)} ctx="P(gagal) × kerugian trip" />
+        <Tile label="SLA terlewat" value={k.overdue} ctx="tanpa ack / WO / intervensi" tone={k.overdue ? "warn" : undefined} />
+        <Tile label="Work order aktif" value={activeWo} ctx={`${(data?.workorders ?? []).length} dibuat`} />
       </div>
 
       <Panel title={<>Antrian alert <Info text="Diurutkan menurut prioritas. Risiko = P(gagal) × kerugian jika trip; P(gagal): P1 90%, P2 60% bila prediksi trip ≤ 45 hari (selain itu 40%), P3 15%. 'Skor lama' = skor matriks risiko lama di Incident Database." /></>}

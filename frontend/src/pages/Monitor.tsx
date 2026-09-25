@@ -4,7 +4,7 @@ import { useLive } from "../live";
 import type { Page } from "../App";
 import { EChart } from "../components/EChart";
 import { alpha, Band, hBars, Line, projection, Ref, timeChart } from "../charts";
-import { EventRow, Info, Num, Panel, Prio, StatusChip } from "../components/ui";
+import { EventRow, Gauge, Info, Panel, Prio, StatusChip } from "../components/ui";
 
 const WINDOWS: [number, string][] = [[168, "7 hari"], [720, "30 hari"], [2160, "90 hari"]];
 const MAX_STEP1 = 1500; // the backend returns every hour up to this many hours, then downsamples
@@ -134,7 +134,7 @@ export default function Monitor({ assetId, go }: { assetId: string | null; go: (
       </div>
 
       <div className={`banner st-b-${st.status}`}>
-        <div><div className="big"><Num value={st.health} fmt={(v) => nf(v)} /></div><div className="xs muted">health</div></div>
+        <Gauge value={st.health} status={st.status} size={66} />
         <div style={{ minWidth: 0 }}>
           <div className="row" style={{ marginBottom: 3 }}><StatusChip status={st.status} /><Prio p={st.prio} />{st.layer && <span className="xs muted">{st.layer}</span>}
             {st.realNow ? <span className="src real">PI asli</span> : <span className="src dummy">Dummy</span>}</div>

@@ -3,7 +3,6 @@ import { AlertsResp, fD, fDT, ModelRow, nf, send, usd } from "../api";
 import { useLive, useLiveFetch } from "../live";
 import type { Page } from "../App";
 import { Info, Meter, Panel, Tag, Tile } from "../components/ui";
-import { Kpi } from "../components/icons";
 
 const LAYERS: [string, string, string, string][] = [
   ["1. Kualitas data", "Sensor yang tidak berubah 6 jam (flatline) memicu alert DATA. Model AI berhenti menilai aset itu supaya sensor rusak tidak dikira kerusakan mesin.", "Tidak", "Aturan"],
@@ -40,10 +39,10 @@ export default function Models({ go }: { go: (p: Page, a?: string | null) => voi
   return (
     <>
       <div className="tiles t4">
-        <Tile icon={<Kpi.asset />} label="Model AI aktif" value={`${ready}/${models.length || snap!.kpis.models.total}`} ctx="MSPC per aset" />
-        <Tile icon={<Kpi.alert />} label="Trip pada replay" value={lead.length} ctx={snap!.mode === "reality" ? "tanpa tindakan" : "sebagian dicegah"} />
-        <Tile icon={<Kpi.clock />} label="Median peringatan dini" value={medianLead != null ? `${nf(medianLead)} hari` : "–"} ctx="sebelum trip" tone={medianLead != null ? "good" : undefined} />
-        <Tile icon={<Kpi.saved />} teal label="Kerugian terhindar" value={usd(snap!.kpis.losses.realityEnd - snap!.kpis.losses.scenarioEnd)} ctx="mode aktif vs kenyataan" />
+        <Tile label="Model AI aktif" value={`${ready}/${models.length || snap!.kpis.models.total}`} ctx="MSPC per aset" />
+        <Tile label="Trip pada replay" value={lead.length} ctx={snap!.mode === "reality" ? "tanpa tindakan" : "sebagian dicegah"} />
+        <Tile label="Median peringatan dini" value={medianLead != null ? `${nf(medianLead)} hari` : "–"} ctx="sebelum trip" tone={medianLead != null ? "good" : undefined} />
+        <Tile label="Kerugian terhindar" value={usd(snap!.kpis.losses.realityEnd - snap!.kpis.losses.scenarioEnd)} ctx="mode aktif vs kenyataan" />
       </div>
 
       <Panel title={<>Status model per aset <Info text="PCA + Hotelling T² + SPE, batas 99,9 persentil data latih. Jam anomali = jam di atas batas (1×); alert P2 butuh 3 jam berturut-turut. Latih ulang memakai jam normal 14 hari terakhir (min. 48 jam)." /></>}>

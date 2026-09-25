@@ -30,10 +30,9 @@ export function SourceBadge({ source }: { source: Source }) {
   return source === "dummy" ? <span className="src dummy" title="Data dummy (simulasi), bukan data panitia">Dummy</span>
     : <span className="src real" title="Data asli dari panitia">Data panitia</span>;
 }
-export function Tile({ label, value, ctx, tone, icon, teal, hint }: { label: string; value: ReactNode; ctx?: ReactNode; tone?: "warn" | "good"; icon?: ReactNode; teal?: boolean; hint?: string }) {
+export function Tile({ label, value, ctx, tone, hint }: { label: string; value: ReactNode; ctx?: ReactNode; tone?: "warn" | "good"; hint?: string }) {
   return (
     <div className={`tile${tone ? " " + tone : ""}`} title={hint}>
-      {icon && <div className={`ico${teal ? " teal" : ""}`}>{icon}</div>}
       <div className="lbl">{label}</div><div className="val">{value}</div>{ctx && <div className="ctx">{ctx}</div>}
     </div>
   );
@@ -130,4 +129,21 @@ export function Num({ value, fmt }: { value: number | null | undefined; fmt: (v:
     return () => cancelAnimationFrame(raf);
   }, [value]);
   return <>{shown == null ? "–" : fmt(shown)}</>;
+}
+
+/** Status as a small dot + word; colour only when abnormal. */
+export function StatusLabel({ status }: { status: string }) {
+  return <span className={`stl st-t-${status}`}><i />{STATUS_LABEL[status] ?? status}</span>;
+}
+/** Health 0–100 as a dial (ring). Empty ring and "–" when there is no current reading. */
+export function Gauge({ value, status, size = 58 }: { value: number | null; status: string; size?: number }) {
+  const r = 24, c = 2 * Math.PI * r, v = value == null ? 0 : Math.max(0, Math.min(100, value));
+  return (
+    <svg className={`gauge g-${status}`} viewBox="0 0 58 58" width={size} height={size} role="img" aria-label={`Health ${value ?? "belum ada"}`}>
+      <circle cx="29" cy="29" r={r} className="g-track" />
+      {v > 0 && <circle cx="29" cy="29" r={r} className="g-val" strokeDasharray={`${(v / 100) * c} ${c}`} transform="rotate(-90 29 29)" />}
+      <text x="29" y="31" textAnchor="middle" className="g-num"><Num value={value} fmt={(x) => String(Math.round(x))} /></text>
+      <text x="29" y="41" textAnchor="middle" className="g-lbl">HEALTH</text>
+    </svg>
+  );
 }

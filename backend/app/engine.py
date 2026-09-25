@@ -307,6 +307,8 @@ class Monitor:
         self.hr.reset_segment()
         self.c1 = self.c5 = 0
         self.episode = None
+        # The pre-trip reading no longer describes the repaired machine: show no health until the next reading.
+        self.last_health = None
 
 
 class PlantEngine:

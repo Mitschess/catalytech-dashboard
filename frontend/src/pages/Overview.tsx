@@ -5,8 +5,7 @@ import type { Page } from "../App";
 import { EChart } from "../components/EChart";
 import { hBars, vBars } from "../charts";
 import { ProcessSchematic } from "../components/ProcessSchematic";
-import { Kpi } from "../components/icons";
-import { EventRow, Info, Meter, Num, Panel, Prio, Sparkline, StatusChip, Tag, Tile } from "../components/ui";
+import { EventRow, Gauge, Info, Num, Panel, Prio, StatusLabel, Tile } from "../components/ui";
 
 export default function Overview({ go }: { go: (p: Page, a?: string | null) => void }) {
   const { meta, snap } = useLive();
@@ -34,45 +33,47 @@ export default function Overview({ go }: { go: (p: Page, a?: string | null) => v
   return (
     <>
       <div className="tiles">
-        <Tile icon={<Kpi.asset />} label="Aset dipantau" value={k.assets} ctx={`${k.models.ready} model AI aktif`} />
-        <Tile icon={<Kpi.alert />} label="Alert terbuka" value={<Num value={open} fmt={(v) => nf(v)} />} ctx={`P1 ${k.alerts.P1} · P2 ${k.alerts.P2} · P3 ${k.alerts.P3}`} tone={k.alerts.P1 ? "warn" : undefined} />
-        <Tile icon={<Kpi.risk />} label="Nilai risiko" value={<Num value={k.varUsd} fmt={usd} />} ctx="P(gagal) × kerugian trip" />
-        <Tile icon={<Kpi.clock />} label="SLA terlewat" value={k.overdue} ctx="alert belum ditindak" tone={k.overdue ? "warn" : undefined} />
-        <Tile icon={<Kpi.loss />} teal label="Kerugian s/d kini" value={<Num value={snap!.mode === "reality" ? l.realityNow : l.scenarioNow} fmt={usd} />} ctx={`total ${usd(l.realityEnd)} bila dibiarkan`} />
-        <Tile icon={<Kpi.saved />} teal label="Kerugian terhindar" value={<Num value={saved} fmt={usd} />} tone={saved > 0 ? "good" : undefined}
+        <Tile label="Aset dipantau" value={k.assets} ctx={`${k.models.ready} model AI aktif`} />
+        <Tile label="Alert terbuka" value={<Num value={open} fmt={(v) => nf(v)} />} ctx={`P1 ${k.alerts.P1} · P2 ${k.alerts.P2} · P3 ${k.alerts.P3}`} tone={k.alerts.P1 ? "warn" : undefined} />
+        <Tile label="Nilai risiko" value={<Num value={k.varUsd} fmt={usd} />} ctx="P(gagal) × kerugian trip" />
+        <Tile label="SLA terlewat" value={k.overdue} ctx="alert belum ditindak" tone={k.overdue ? "warn" : undefined} />
+        <Tile label="Kerugian s/d kini" value={<Num value={snap!.mode === "reality" ? l.realityNow : l.scenarioNow} fmt={usd} />} ctx={`total ${usd(l.realityEnd)} bila dibiarkan`} />
+        <Tile label="Kerugian terhindar" value={<Num value={saved} fmt={usd} />} tone={saved > 0 ? "good" : undefined}
           ctx={snap!.mode === "reality" ? "pilih Otomatis / Manual" : "proyeksi skenario ini"} />
       </div>
 
+      <Panel title={<>Skematik proses <Info text="Ilustratif, bukan P&ID. Pompa/kompresor/blower berputar saat beroperasi dan berhenti saat trip. Biru/teal = normal; kuning, oranye, merah = tidak normal. Cincin berdenyut = P1 belum di-acknowledge. Klik aset untuk detail." /></>}
+        sub={<span className="legend" style={{ marginTop: 0 }}>
+          <span><i className="sq" style={{ background: "var(--accent)" }} />normal</span><span><i className="sq" style={{ background: "var(--watch)" }} />watch</span>
+          <span><i className="sq" style={{ background: "var(--alarm)" }} />alarm</span><span><i className="sq" style={{ background: "var(--crit)" }} />critical</span>
+          <span><i className="sq" style={{ background: "var(--good)" }} />intervensi</span></span>}>
+        <ProcessSchematic onOpen={(id) => go("monitor", id)} />
+      </Panel>
+
+      <div className="gap" />
+      <div className="cards">{assets.map((s) => <AssetCard key={s.id} s={s} onOpen={() => go("monitor", s.id)} />)}</div>
+
+      <div className="gap" />
       <div className="ov">
-        <Panel title={<>Skematik proses <Info text="Ilustratif, bukan P&ID. Pompa/kompresor/blower berputar saat beroperasi dan berhenti saat trip. Biru/teal = normal; kuning, oranye, merah = tidak normal. Cincin berdenyut = P1 belum di-acknowledge. Klik aset untuk detail." /></>}
-          sub={<span className="legend" style={{ marginTop: 0 }}>
-            <span><i className="sq" style={{ background: "var(--accent)" }} />normal</span><span><i className="sq" style={{ background: "var(--watch)" }} />watch</span>
-            <span><i className="sq" style={{ background: "var(--alarm)" }} />alarm</span><span><i className="sq" style={{ background: "var(--crit)" }} />critical</span>
-            <span><i className="sq" style={{ background: "var(--good)" }} />intervensi</span></span>}>
-          <ProcessSchematic onOpen={(id) => go("monitor", id)} />
-        </Panel>
         <Panel title="Kejadian live" sub={`${events.length}`}>
           <div className="feed fill">
             {events.length ? events.map((e) => <EventRow key={`${e.h}-${e.assetId}-${e.type}`} e={e} onClick={() => go("monitor", e.assetId)} />)
               : <div className="empty">Tekan ▶ di bilah atas.</div>}
           </div>
         </Panel>
-      </div>
-
-      <div className="gap" />
-      <div className="cards">{assets.map((s) => <AssetCard key={s.id} s={s} onOpen={() => go("monitor", s.id)} />)}</div>
-
-      <div className="gap" />
-      <div className="tiles t4">
-        <Tile icon={<Kpi.list />} label="Insiden 2024–2026" value={nf(inc.n)} ctx={`${usd(inc.totalLoss)} total kerugian`} />
-        <Tile icon={<Kpi.risk />} label="Kerugian masih terbuka" value={usd(inc.openLoss)} ctx={`${inc.openN} insiden`} />
-        <Tile icon={<Kpi.clock />} label="RCA lewat tenggat" value={`${inc.rcaOverdue}/${inc.rcaStage}`} ctx={`median ${nf(inc.overdueMedianDays)} hari`} tone="warn" />
-        <Tile icon={<Kpi.chart />} label="Skor risiko lama vs kerugian" value={`ρ ${nf(inc.spearman, 2)}`} ctx="tidak berkorelasi" tone="warn"
-          hint="Korelasi Spearman antara Risk Score lama dan kerugian nyata di Incident Database" />
-      </div>
-      <div className="grid g2">
-        <Panel title="Kerugian bulanan" sub="juta US$ · garis = rata-rata 3 bulan"><EChart option={monthly} height={200} label="Kerugian bulanan dari incident database" /></Panel>
-        <Panel title="Mekanisme kegagalan teratas" sub="Incident Database"><EChart option={pareto} height={200} label="Pareto kerugian per mekanisme" /></Panel>
+        <div className="stack">
+          <div className="tiles t4" style={{ marginBottom: 0 }}>
+            <Tile label="Insiden 2024–2026" value={nf(inc.n)} ctx={`${usd(inc.totalLoss)} total kerugian`} />
+            <Tile label="Kerugian masih terbuka" value={usd(inc.openLoss)} ctx={`${inc.openN} insiden`} />
+            <Tile label="RCA lewat tenggat" value={`${inc.rcaOverdue}/${inc.rcaStage}`} ctx={`median ${nf(inc.overdueMedianDays)} hari`} tone="warn" />
+            <Tile label="Skor lama vs kerugian" value={`ρ ${nf(inc.spearman, 2)}`} ctx="tidak berkorelasi" tone="warn"
+              hint="Korelasi Spearman antara Risk Score lama dan kerugian nyata di Incident Database" />
+          </div>
+          <div className="grid g2">
+            <Panel title="Kerugian bulanan" sub="juta US$ · garis = rata-rata 3 bulan"><EChart option={monthly} height={190} label="Kerugian bulanan dari incident database" /></Panel>
+            <Panel title="Mekanisme kegagalan teratas" sub="Incident Database"><EChart option={pareto} height={190} label="Pareto kerugian per mekanisme" /></Panel>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -91,18 +92,24 @@ function AssetCard({ s, onOpen }: { s: AssetState; onOpen: () => void }) {
     const t = window.setTimeout(() => setFlash(false), 1400);
     return () => clearTimeout(t);
   }, [s.status]);
-  const foot = s.status === "TRIP" ? "Trip tidak terencana" : s.status === "MAINT" ? "Intervensi berjalan"
-    : s.predH ? `Prediksi trip ${fDs(s.predH)}` : s.scheduledH != null ? `Intervensi ${fDs(s.scheduledH)}`
-      : s.mspc.ratio != null ? `Skor AI ${nf(s.mspc.ratio, 2)}×` : "Model AI belajar";
+  const stopped = s.status === "TRIP" || s.status === "MAINT";
   return (
-    <button className={`acard st-b-${s.status}${flash ? " flash" : ""}`} onClick={onOpen}>
-      <div className="r1"><Tag id={s.id} />{s.realNow ? <span className="src real" title="Jam ini dari data PI panitia">PI asli</span>
-        : <span className="src dummy" title="Jam ini isian dummy (pola normal buatan dari hari normal aset ini)">Dummy</span>}</div>
-      <div className="nm">{m.short} · {m.plantCode}</div>
-      <div className="r1"><span className="hnum"><Num value={s.health} fmt={(v) => nf(v)} /></span><div style={{ flex: 1 }}><Meter value={s.health} status={s.status} /></div><Sparkline values={s.healthTrend} w={54} /></div>
-      <div className="r1"><StatusChip status={s.status} /><Prio p={s.prio} /></div>
-      <div className="why">{s.reason || (s.dq ? `Sensor ${s.dq.join(", ")} flatline.` : "Semua parameter normal.")}</div>
-      <div className="r3">{foot}</div>
+    <button className={`acard st-b-${s.status}${flash ? " flash" : ""}`} onClick={onOpen} title={s.reason || undefined}>
+      <div className="hd">
+        <div style={{ minWidth: 0 }}><div className="id">{s.id}</div><div className="nm">{m.short} · {m.plantCode}</div></div>
+        <div className="st"><StatusLabel status={s.status} />{s.prio !== "-" && <Prio p={s.prio} />}</div>
+      </div>
+      <div className="bd">
+        <Gauge value={s.health} status={s.status} />
+        <dl className="kv">
+          {stopped ? <><dt>Status</dt><dd className="bad">{s.status === "TRIP" ? "trip" : "intervensi"}</dd></>
+            : s.scheduledH != null ? <><dt>Intervensi</dt><dd>{fDs(s.scheduledH)}</dd></>
+              : <><dt>Prediksi trip</dt><dd className={s.predH != null ? "bad" : undefined}>{s.predH != null ? fDs(s.predH) : "–"}</dd></>}
+          <dt>Skor AI</dt><dd>{s.mspc.ratio != null ? `${nf(s.mspc.ratio, 2)}×` : s.mspc.state === "training" ? `belajar ${nf(s.mspc.progress * 100)}%` : "–"}</dd>
+          <dt>Data jam ini</dt>{s.realNow ? <dd className="rl">PI asli</dd> : <dd className="dm" title="Isian dummy: pola normal buatan dari hari normal aset ini">dummy</dd>}
+        </dl>
+      </div>
+      <div className={`why${s.reason ? "" : " ok"}`}>{s.reason || (s.dq ? `Sensor ${s.dq.join(", ")} flatline` : "Semua parameter normal")}</div>
     </button>
   );
 }

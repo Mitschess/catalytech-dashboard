@@ -3,7 +3,6 @@ import { fD, nf, UNIT_ORDER, usd } from "../api";
 import { useLive } from "../live";
 import type { Page } from "../App";
 import { Info, Panel, Tag, Tile } from "../components/ui";
-import { Kpi } from "../components/icons";
 import { Coverage } from "../components/Coverage";
 
 const ARCH: [string, string, string][] = [
@@ -45,10 +44,10 @@ export default function DataPage({ go }: { go: (p: Page, a?: string | null) => v
   return (
     <>
       <div className="tiles t4">
-        <Tile icon={<Kpi.asset />} label="Aset data panitia" value={assets.length} ctx="5 kasus RCA" />
-        <Tile icon={<Kpi.chart />} label="Data per jam asli" value={`${nf(share * 100)}%`} ctx={`${nf(realHours)} jam; sisanya dummy`} />
-        <Tile icon={<Kpi.list />} label="Insiden di database" value={nf(inc.n)} ctx={`${usd(inc.totalLoss)} kerugian`} />
-        <Tile icon={<Kpi.clock />} teal label="Rentang simulasi" value={`${fD(0).replace(/ \d{4}$/, "")} – ${fD(meta!.nHours - 1)}`} ctx={`${nf(meta!.nHours)} jam`} />
+        <Tile label="Aset data panitia" value={assets.length} ctx="5 kasus RCA" />
+        <Tile label="Data per jam asli" value={`${nf(share * 100)}%`} ctx={`${nf(realHours)} jam; sisanya dummy`} />
+        <Tile label="Insiden di database" value={nf(inc.n)} ctx={`${usd(inc.totalLoss)} kerugian`} />
+        <Tile label="Rentang simulasi" value={`${fD(0).replace(/ \d{4}$/, "")} – ${fD(meta!.nHours - 1)}`} ctx={`${nf(meta!.nHours)} jam`} />
       </div>
 
       <Panel title={<>Cakupan data per aset <Info text="Semua aset, kejadian dan kerugian dari file panitia. Data PI per jam asli hanya 30 hari per aset, di bulan berbeda; jam lain diisi dummy berlabel (pola normal dari hari normal aset itu sendiri). Isian tidak pernah menjadi bukti kerusakan dan tidak mengubah kerugian." /></>}>
