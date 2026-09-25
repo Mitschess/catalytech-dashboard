@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fD, fDT, fv, nf, RcaView, STATUS_RANK, UNIT_ORDER, usd } from "../api";
 import { useLive, useLiveFetch } from "../live";
 import type { Page } from "../App";
-import { Markdown, Panel, Prio, SourceBadge, StatusChip, Tag } from "../components/ui";
+import { Info, Markdown, Panel, Prio, StatusChip, Tag } from "../components/ui";
 
 interface Turn { role: "user" | "assistant"; content: string }
 
@@ -101,26 +101,20 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">AI RCA Assistant</div>
-          <h1 className="row" style={{ gap: 10 }}>{m.id} · {m.short} <SourceBadge source={m.source} /></h1>
-          <p>Hipotesis akar masalah disusun dari data kondisi terkini, pustaka mode kegagalan per jenis aset, dan insiden serupa di database.
-            Semua hanya memakai data sampai {fDT(snap!.now)}. Hasilnya titik awal investigasi, bukan kesimpulan final.</p>
-        </div>
-        <div className="row">
-          <select className="sel" aria-label="Pilih aset" value={id} onChange={(e) => go("rca", e.target.value)}>
-            {options.map((a) => <option key={a.id} value={a.id}>{a.plantCode} · {a.id} · {a.short}</option>)}
-          </select>
-          <button className="btn" onClick={() => go("monitor", id)}>Lihat grafik aset</button>
-        </div>
+      <div className="toolbar">
+        <select className="sel" aria-label="Pilih aset" value={id} onChange={(e) => go("rca", e.target.value)}>
+          {options.map((a) => <option key={a.id} value={a.id}>{a.plantCode} · {a.id} · {a.short}</option>)}
+        </select>
+        <h2>{m.id} <span className="muted" style={{ fontWeight: 500 }}>· {m.short}</span></h2>
+        <Info text={`Hipotesis disusun dari kondisi terkini, pustaka mode kegagalan per jenis aset, dan insiden serupa. Hanya memakai data sampai ${fDT(snap!.now)}. Titik awal investigasi, bukan kesimpulan final.`} />
+        <span className="sp" />
+        <button className="btn sm" onClick={() => go("monitor", id)}>Grafik aset</button>
       </div>
 
-      <div className="banner" style={{ gridTemplateColumns: "auto 1fr" }}>
+      <div className={`banner st-b-${st.status}`} style={{ gridTemplateColumns: "auto 1fr" }}>
         <div className="row"><StatusChip status={st.status} /><Prio p={st.prio} /></div>
-        <div className="why">{st.reason || (st.status === "NORMAL" ? "Aset dalam pola normal. Analisis tetap bisa dibuat sebagai pemeriksaan kondisi." : "Belum ada penyimpangan berarti.")}
-          {!st.realNow && <> Data per jam saat ini adalah <span className="src dummy">isian dummy</span>; bukti kerusakan berasal dari pembacaan mingguan asli.</>}
-          {data && data.dq.length > 0 && <> Sensor bermasalah: <b>{data.dq.join(", ")}</b>. Periksa instrumen sebelum menyimpulkan kerusakan mekanis.</>}</div>
+        <div className="why">{st.reason || "Belum ada penyimpangan berarti."}
+          {data && data.dq.length > 0 && <> Sensor bermasalah: <b>{data.dq.join(", ")}</b>; cek instrumen dulu.</>}</div>
       </div>
 
       {err && <div className="empty" style={{ marginBottom: 14 }}>Gagal memuat analisis: {err}</div>}
@@ -129,7 +123,7 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
       {data && (
         <div className="rca-grid">
           <div className="stack">
-            <Panel title="Verifikasi parameter (4P)" sub="nilai terbaru terhadap baseline dan batas">
+            <Panel title={<>Verifikasi parameter (4P) <Info text="G = dalam batas · CEK = bergeser lebih dari 10% dari baseline · NG = melewati batas alarm." /></>}>
               {data.condition.length === 0 ? <div className="empty">Belum ada pembacaan kondisi.</div> : (
                 <div className="tbl-wrap">
                   <table className="tbl">
@@ -150,10 +144,9 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
                   </table>
                 </div>
               )}
-              <div className="note">G = dalam batas · CEK = bergeser lebih dari 10% dari baseline · NG = melewati batas alarm.</div>
             </Panel>
 
-            <Panel title="Hipotesis akar masalah" sub="kecocokan bukti terhadap pustaka mode kegagalan (4M+1E)">
+            <Panel title={<>Hipotesis akar masalah <Info text="Persentase = kecocokan bukti terhadap pustaka mode kegagalan (4M+1E). Chip bukti: 0% = di baseline, 100% = mencapai batas alarm/desain." /></>}>
               {hyps.length === 0 ? <div className="empty">Belum ada pustaka hipotesis untuk jenis aset ini.</div> : hyps.map((h, i) => (
                 <div className={`hyp${i === 0 ? " top" : ""}`} key={h.id}>
                   <div className="hh"><b>{i + 1}. {h.title}</b><span className="conf">{nf(h.score * 100)}%</span></div>
@@ -168,26 +161,21 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
                       </span>
                     ))}
                   </div>
-                  {i < 2 && (
-                    <div className="grid g2" style={{ gap: 10 }}>
-                      <div><div className="xs muted">Langkah verifikasi</div><ul className="clean small">{h.checks.map((c) => <li key={c}>{c}</li>)}</ul></div>
-                      <div><div className="xs muted">Usulan tindakan</div><ul className="clean small">{h.actions.map((c) => <li key={c}>{c}</li>)}</ul></div>
-                    </div>
-                  )}
+                  {i === 0 ? <Steps checks={h.checks} actions={h.actions} />
+                    : <details className="more" style={{ marginTop: 0 }}><summary>Langkah & tindakan</summary><div><Steps checks={h.checks} actions={h.actions} /></div></details>}
                 </div>
               ))}
             </Panel>
 
-            <Panel title="Insiden serupa di database" sub="hanya insiden sebelum waktu simulasi" right={<SourceBadge source="real" />}>
+            <Panel title={<>Insiden serupa <Info text="Dari Incident Database, hanya insiden sebelum waktu simulasi." /></>}>
               {data.similar.length === 0 ? <div className="empty">Tidak ada insiden serupa.</div> : (
                 <div className="tbl-wrap">
                   <table className="tbl">
-                    <thead><tr><th>Tanggal</th><th>Tag</th><th className="wrap">Judul</th><th>Plant</th><th>Mode</th><th>Status</th><th className="r">Loss</th><th className="r">Cocok</th></tr></thead>
+                    <thead><tr><th>Tanggal</th><th>Judul</th><th>Mode</th><th className="r">Loss</th><th className="r">Cocok</th></tr></thead>
                     <tbody>
                       {data.similar.map((s) => (
                         <tr key={s.id}>
-                          <td className="num">{s.date}</td><td><Tag id={s.tag} /></td><td className="wrap">{s.title}</td><td>{s.plant}</td><td>{s.fm}</td>
-                          <td className="xs">{s.status}</td><td className="r">{usd(s.loss)}</td><td className="r">{nf(s.score * 100)}%</td>
+                          <td className="num">{s.date}</td><td title={`${s.plant} · ${s.status}`}>{s.title}</td><td className="small">{s.fm}</td><td className="r">{usd(s.loss)}</td><td className="r">{nf(s.score * 100)}%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -210,20 +198,13 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
           </div>
 
           <div className="stack">
-            <Panel title="Analisis Claude" sub={llm.available ? `model ${llm.model}` : "belum aktif"}>
+            <Panel title={<>Analisis Claude <Info text="Claude membaca kondisi parameter, skor AI, hipotesis, insiden serupa dan laporan RCA terbit, sesuai waktu simulasi saat ditanya. Jawaban wajib diverifikasi engineer." /></>} sub={llm.available ? llm.model : "belum aktif"}>
               {!llm.available ? (
-                <div className="callout">
-                  <b>Asisten Claude belum aktif.</b> Isi <span className="mono">ANTHROPIC_API_KEY</span> di file <span className="mono">backend/.env</span> (lihat README),
-                  lalu jalankan ulang server. Tanpa itu, verifikasi parameter, hipotesis, insiden serupa dan draf laporan di halaman ini tetap berjalan.
-                </div>
+                <div className="callout"><b>Asisten Claude belum aktif.</b> Isi <span className="mono">ANTHROPIC_API_KEY</span> di <span className="mono">backend/.env</span>, lalu jalankan ulang server.</div>
               ) : (
                 <>
                   {turns.length === 0 && (
-                    <div className="stack" style={{ gap: 8 }}>
-                      <p className="small ink2">Claude membaca kondisi parameter, skor AI, hipotesis, insiden serupa dan laporan RCA terbit untuk aset ini,
-                        lalu menulis analisis probable root cause dalam format ringkas.</p>
-                      <div><button className="btn primary" onClick={() => ask(null)} disabled={streaming}>Buat analisis dengan Claude</button></div>
-                    </div>
+                    <div><button className="btn primary" onClick={() => ask(null)} disabled={streaming}>Buat analisis dengan Claude</button></div>
                   )}
                   {turns.length > 0 && (
                     <div className="grid" style={{ gap: 8, maxHeight: 620, overflowY: "auto" }}>
@@ -242,7 +223,6 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
                         : <button className="btn ghost" type="button" onClick={() => { setTurns([]); setAiErr(null); }}>Ulang</button>}
                     </form>
                   )}
-                  <div className="note">Konteks dikirim ulang setiap pertanyaan, sesuai waktu simulasi saat itu. Jawaban AI wajib diverifikasi engineer.</div>
                 </>
               )}
             </Panel>
@@ -255,5 +235,14 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
         </div>
       )}
     </>
+  );
+}
+
+function Steps({ checks, actions }: { checks: string[]; actions: string[] }) {
+  return (
+    <div className="grid g2" style={{ gap: 10 }}>
+      <div><div className="xs muted">Verifikasi</div><ul className="clean small">{checks.map((c) => <li key={c}>{c}</li>)}</ul></div>
+      <div><div className="xs muted">Tindakan</div><ul className="clean small">{actions.map((c) => <li key={c}>{c}</li>)}</ul></div>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fD, fHour, MODE_LABEL, Mode, STATUS_LABEL, UNIT_ORDER, usd } from "./api";
+import { fD, fHour, MODE_LABEL, Mode, STATUS_LABEL, UNIT_ORDER } from "./api";
 import { useLive } from "./live";
 import { BackIcon, evColor, FwdIcon, PauseIcon, PlayIcon } from "./components/ui";
 import { CollapseIcon, MenuIcon, PageIcon } from "./components/icons";
@@ -52,11 +52,10 @@ export default function App() {
           <div className="top-in">
             <button className="btn icon ghost menu-btn" aria-label="Buka menu" onClick={() => setDrawer(true)}><MenuIcon /></button>
             <div className="top-title">{title}</div>
-            <span className="sp" />
+            <SimControls />
             <span className={`live-badge${snap?.running ? " on" : ""}`}>{snap?.running ? "● LIVE" : "JEDA"}</span>
-            <span className={`conn ${conn}`}><i /><span className="conn-t">{conn === "open" ? "Terhubung" : conn === "connecting" ? "Menghubungkan…" : "Terputus, mencoba lagi…"}</span></span>
+            <span className={`conn-dot ${conn}`} title={conn === "open" ? "Terhubung ke server" : conn === "connecting" ? "Menghubungkan…" : "Terputus, mencoba lagi…"} />
           </div>
-          <SimBar />
         </header>
         <main>
           {!meta || !snap ? (
@@ -97,7 +96,7 @@ function Sidebar({ route, go, collapsed, toggle }: { route: { page: Page; asset:
       <div className="side-head">
         <button className="brand" onClick={() => go("overview")} title="Catalytech SIGAP">
           <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" strokeWidth="2" /><line x1="1.5" y1="16" x2="30.5" y2="16" stroke="currentColor" strokeWidth="1.4" /><text x="16" y="13" textAnchor="middle" fontSize="9" fontWeight="600" fontFamily="IBM Plex Mono, Consolas, monospace" fill="currentColor">AI</text><text x="16" y="25.5" textAnchor="middle" fontSize="7.5" fontFamily="IBM Plex Mono, Consolas, monospace" fill="currentColor">101</text></svg>
-          <span className="brand-t"><span className="brand-name">Catalytech <span>SIGAP</span></span><span className="brand-sub">Intelligent Manufacturing</span></span>
+          <span className="brand-t"><span className="brand-name">Catalytech <span>SIGAP</span></span><span className="brand-sub">Predictive Maintenance</span></span>
         </button>
         <button className="btn icon ghost collapse-btn" onClick={toggle} aria-label={collapsed ? "Lebarkan sidebar" : "Ciutkan sidebar"} title={collapsed ? "Lebarkan" : "Ciutkan"}><CollapseIcon open={!collapsed} /></button>
       </div>
@@ -132,55 +131,45 @@ function Sidebar({ route, go, collapsed, toggle }: { route: { page: Page; asset:
           </div>
         ))}
       </div>
-      <div className="side-foot"><b>5 aset data panitia.</b> Jam di luar jendela data asli diisi data <span className="src dummy">Dummy</span> berlabel.</div>
+      <div className="side-foot">5 aset data panitia · <span className="src dummy">Dummy</span> = isian jam kosong</div>
     </aside>
   );
 }
 
-function SimBar() {
+function SimControls() {
   const { meta, snap, control, busy } = useLive();
   const [drag, setDrag] = useState<number | null>(null);
-  if (!meta || !snap) return null;
+  if (!meta || !snap) return <span className="sp" />;
   const now = drag ?? snap.now;
   const commit = (v: number) => { setDrag(null); if (v !== snap.now) control("seek", v); };
-  const l = snap.kpis.losses;
+  const speed = (s: number) => (s === 1 ? "1 jam" : s < 24 ? `${s} jam` : s === 24 ? "1 hari" : s === 168 ? "1 minggu" : `${s / 24} hari`) + "/dtk";
   return (
-    <div className="simbar">
-      <div className="simbar-in">
-        <div className="sim-left">
-          <button className="btn icon" aria-label="Mundur 1 hari" onClick={() => control("seek", Math.max(0, snap.now - 24))}><BackIcon /></button>
-          <button className="btn icon primary" aria-label={snap.running ? "Jeda" : "Putar"} onClick={() => control(snap.running ? "pause" : "play")}>{snap.running ? <PauseIcon /> : <PlayIcon />}</button>
-          <button className="btn icon" aria-label="Maju 1 hari" onClick={() => control("step", 24)}><FwdIcon /></button>
-          <div className="sim-date">{fD(now)}<small>{fHour(now)}</small></div>
-        </div>
-        <div className="scrub">
-          <input type="range" min={0} max={meta.nHours - 1} step={1} value={now} aria-label="Tanggal simulasi"
-            onChange={(e) => setDrag(+e.target.value)} onPointerUp={(e) => commit(+(e.target as HTMLInputElement).value)}
-            onKeyUp={(e) => commit(+(e.target as HTMLInputElement).value)} />
-          <div className="scoreline">
-            {busy ? <span className="busy">{busy}</span> : (
-              <>
-                <span>kerugian 5 kasus, kenyataan <b>{usd(l.realityEnd)}</b></span>
-                {snap.mode !== "reality" && <span>{MODE_LABEL[snap.mode]} <b>{usd(l.scenarioEnd)}</b></span>}
-                {snap.mode !== "reality" && <span>terhindar <b style={{ color: "var(--good)" }}>{usd(l.realityEnd - l.scenarioEnd)}</b></span>}
-                {snap.mode === "reality" && <span className="muted">pilih SIGAP otomatis / Manual untuk melihat kerugian yang bisa dihindari</span>}
-              </>
-            )}
-          </div>
-        </div>
-        <div className="sim-right">
-          <select className="sel" aria-label="Kecepatan simulasi" value={snap.speed} onChange={(e) => control("speed", +e.target.value)}>
-            {meta.speeds.map((s) => <option key={s} value={s}>{s === 1 ? "1 jam" : s < 24 ? `${s} jam` : s === 24 ? "1 hari" : s === 168 ? "1 minggu" : `${s / 24} hari`} / detik</option>)}
-          </select>
-          <label className="chk"><input type="checkbox" checked={snap.pauseOnAlert} onChange={(e) => control("pauseOnAlert", e.target.checked)} /> Jeda saat alert</label>
-          <div className="seg" role="group" aria-label="Skenario">
-            {(["reality", "auto", "manual"] as Mode[]).map((m) => (
-              <button key={m} aria-pressed={snap.mode === m} onClick={() => control("mode", m)} title={m === "reality" ? "Tidak ada tindakan, sesuai yang terjadi" : m === "auto" ? "Intervensi otomatis sesuai SLA" : "Anda yang memutuskan intervensi"}>{MODE_LABEL[m]}</button>
-            ))}
-          </div>
-          <button className="btn sm ghost" onClick={() => control("reset")} title="Kembali ke 5 Jan 2026, hapus semua tindakan">Ulang</button>
-        </div>
+    <>
+      <div className="sim">
+        <button className="btn icon" aria-label="Mundur 1 hari" title="Mundur 1 hari" onClick={() => control("seek", Math.max(0, snap.now - 24))}><BackIcon /></button>
+        <button className="btn icon primary" aria-label={snap.running ? "Jeda" : "Putar"} title={snap.running ? "Jeda" : "Putar"} onClick={() => control(snap.running ? "pause" : "play")}>{snap.running ? <PauseIcon /> : <PlayIcon />}</button>
+        <button className="btn icon" aria-label="Maju 1 hari" title="Maju 1 hari" onClick={() => control("step", 24)}><FwdIcon /></button>
+        <div className="sim-date">{fD(now)}<small>{fHour(now)}</small></div>
       </div>
-    </div>
+      <div className="scrub">
+        <input type="range" min={0} max={meta.nHours - 1} step={1} value={now} aria-label="Tanggal simulasi"
+          onChange={(e) => setDrag(+e.target.value)} onPointerUp={(e) => commit(+(e.target as HTMLInputElement).value)}
+          onKeyUp={(e) => commit(+(e.target as HTMLInputElement).value)} />
+        {busy && <span className="busy">{busy}</span>}
+      </div>
+      <div className="top-r">
+        <select className="sel" aria-label="Kecepatan simulasi" value={snap.speed} onChange={(e) => control("speed", +e.target.value)}>
+          {meta.speeds.map((s) => <option key={s} value={s}>{speed(s)}</option>)}
+        </select>
+        <label className="chk" title="Simulasi berhenti otomatis saat ada alert baru"><input type="checkbox" checked={snap.pauseOnAlert} onChange={(e) => control("pauseOnAlert", e.target.checked)} /> Jeda di alert</label>
+        <div className="seg" role="group" aria-label="Skenario">
+          {(["reality", "auto", "manual"] as Mode[]).map((m) => (
+            <button key={m} aria-pressed={snap.mode === m} onClick={() => control("mode", m)}
+              title={m === "reality" ? "Replay apa adanya, tanpa tindakan" : m === "auto" ? "SIGAP menjadwalkan intervensi sesuai SLA" : "Anda yang memutuskan intervensi"}>{m === "auto" ? "Otomatis" : MODE_LABEL[m]}</button>
+          ))}
+        </div>
+        <button className="btn sm ghost" onClick={() => control("reset")} title="Kembali ke 5 Jan 2026 dan hapus semua tindakan">Ulang</button>
+      </div>
+    </>
   );
 }

@@ -54,7 +54,7 @@ export function timeChart(o: {
   return {
     animation: false,
     grid: { left: o.grid?.left ?? 46, right: o.grid?.right ?? 14, top: o.grid?.top ?? 14, bottom: o.grid?.bottom ?? 24, containLabel: false },
-    xAxis: { type: "time", min: hToMs(o.x0), max: hToMs(o.x1), axisLine: { lineStyle: { color: c.line } }, axisTick: { show: false },
+    xAxis: { type: "time", min: hToMs(o.x0), max: hToMs(o.x1), splitNumber: 4, axisLine: { lineStyle: { color: c.line } }, axisTick: { show: false },
       axisLabel: { color: c.ink3, fontSize: 10, hideOverlap: true, formatter: (v: number) => fDs(msToH(v)) }, splitLine: { show: false } },
     yAxis: { type: o.log ? "log" : "value", scale: !o.log, min: o.yMin, max: o.yMax, axisLine: { show: false },
       axisLabel: { color: c.ink3, fontSize: 10, formatter: (v: number) => (o.log ? nf(v, v >= 1 ? 0 : v >= 0.1 ? 1 : 2) : fv(v)) },

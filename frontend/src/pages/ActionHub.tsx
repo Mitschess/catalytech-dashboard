@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { Alert, AlertsResp, CapaRow, days, fD, fDT, nf, send, usd, WorkOrder } from "../api";
 import { useLive, useLiveFetch } from "../live";
 import type { Page } from "../App";
-import { Panel, Prio, SourceBadge, StatusChip, Tag, Tile } from "../components/ui";
+import { Info, Panel, Prio, StatusChip, Tag, Tile } from "../components/ui";
+import { Kpi } from "../components/icons";
 
 type Show = "open" | "all";
 const WO_STATES: WorkOrder["status"][] = ["Open", "Dikerjakan", "Selesai"];
@@ -45,40 +46,29 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
 
   return (
     <>
-      <div className="page-head">
-        <div><div className="eyebrow">Dari alert ke tindakan</div><h1>Action Hub</h1>
-          <p>Setiap alert punya pemilik, tenggat SLA (P1: 24 jam, P2/P3: 7 hari) dan nilai risiko dalam US$. Alert tanpa acknowledge, work order,
-            atau intervensi setelah tenggat ditandai terlambat. Semua tindakan tercatat pada jam simulasi saat itu.</p></div>
-        <div className="row">
-          <label className="chk">Nama Anda
-            <input value={name} onChange={(e) => { setName(e.target.value); saveName(e.target.value); }} maxLength={40}
-              style={{ border: "1px solid var(--line-2)", background: "var(--surface)", borderRadius: 5, padding: "4px 8px", width: 130 }} />
-          </label>
-          <div className="seg" role="group" aria-label="Tampilkan alert">
-            <button aria-pressed={show === "open"} onClick={() => setShow("open")}>Terbuka</button>
-            <button aria-pressed={show === "all"} onClick={() => setShow("all")}>Semua</button>
-          </div>
+      <div className="toolbar">
+        <div className="seg" role="group" aria-label="Tampilkan alert">
+          <button aria-pressed={show === "open"} onClick={() => setShow("open")}>Terbuka</button>
+          <button aria-pressed={show === "all"} onClick={() => setShow("all")}>Semua</button>
         </div>
+        <label className="chk">Nama
+          <input className="txt" value={name} onChange={(e) => { setName(e.target.value); saveName(e.target.value); }} maxLength={40} style={{ width: 130 }} />
+        </label>
+        <span className="sp" />
+        {snap!.mode !== "manual" && <button className="btn sm" onClick={() => control("mode", "manual")} title="Di mode Manual Anda yang memutuskan kapan intervensi">Mode Manual untuk intervensi</button>}
       </div>
 
       <div className="tiles">
-        <Tile label="Alert P1 terbuka" value={k.alerts.P1} ctx="tindak dalam 24 jam" tone={k.alerts.P1 ? "warn" : undefined} />
-        <Tile label="Alert P2 terbuka" value={k.alerts.P2} ctx="tindak dalam 7 hari" />
-        <Tile label="Alert P3 terbuka" value={k.alerts.P3} ctx="pantau, tindak dalam 7 hari" />
-        <Tile label="Nilai risiko terbuka" value={usd(k.varUsd)} ctx="Σ P(gagal) × kerugian jika trip" />
-        <Tile label="SLA terlewat" value={k.overdue} ctx="tanpa ack / WO / intervensi" tone={k.overdue ? "warn" : undefined} />
-        <Tile label="Work order aktif" value={activeWo} ctx={`${(data?.workorders ?? []).length} WO dibuat di sesi ini`} />
+        <Tile icon={<Kpi.alert />} label="P1 terbuka" value={k.alerts.P1} ctx="SLA 24 jam" tone={k.alerts.P1 ? "warn" : undefined} />
+        <Tile icon={<Kpi.alert />} label="P2 terbuka" value={k.alerts.P2} ctx="SLA 7 hari" />
+        <Tile icon={<Kpi.alert />} label="P3 terbuka" value={k.alerts.P3} ctx="SLA 7 hari" />
+        <Tile icon={<Kpi.risk />} label="Nilai risiko" value={usd(k.varUsd)} ctx="P(gagal) × kerugian trip" />
+        <Tile icon={<Kpi.clock />} label="SLA terlewat" value={k.overdue} ctx="tanpa ack / WO / intervensi" tone={k.overdue ? "warn" : undefined} />
+        <Tile icon={<Kpi.list />} teal label="Work order aktif" value={activeWo} ctx={`${(data?.workorders ?? []).length} dibuat`} />
       </div>
 
-      {snap!.mode !== "manual" && (
-        <div className="callout" style={{ marginBottom: 14 }}>
-          Mode <b>{snap!.mode === "reality" ? "Kenyataan" : "SIGAP otomatis"}</b>: acknowledge dan work order tetap bisa dibuat, tetapi jadwal intervensi
-          {snap!.mode === "auto" ? " diatur otomatis sesuai SLA" : " tidak dijalankan (replay apa adanya)"}.{" "}
-          <button className="btn sm" onClick={() => control("mode", "manual")}>Pindah ke mode Manual</button> untuk memutuskan intervensi sendiri.
-        </div>
-      )}
-
-      <Panel title="Antrian alert" sub={`${alerts.length} alert${show === "open" ? " terbuka" : ""} · diurutkan menurut prioritas`}>
+      <Panel title={<>Antrian alert <Info text="Diurutkan menurut prioritas. Risiko = P(gagal) × kerugian jika trip; P(gagal): P1 90%, P2 60% bila prediksi trip ≤ 45 hari (selain itu 40%), P3 15%. 'Skor lama' = skor matriks risiko lama di Incident Database." /></>}
+        sub={`${alerts.length} alert`}>
         {err && <div className="empty">Gagal memuat alert: {err}</div>}
         {!data && !err ? <div className="empty">Memuat…</div> : alerts.length === 0 ? (
           <div className="empty">{show === "open" ? "Tidak ada alert terbuka pada waktu simulasi ini." : "Belum ada alert."}</div>
@@ -94,19 +84,19 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
                   const pd = a.predH != null ? days(now, a.predH) : null;
                   return (
                     <tr key={a.id} className={a.open && a.level === 3 ? "hl" : undefined}>
-                      <td><div className="stack" style={{ gap: 4 }}><Prio p={a.prio} />{a.open ? <StatusChip status={a.status} /> : <StatusChip status={a.outcome === "trip" ? "TRIP" : "MAINT"} />}</div></td>
-                      <td>
-                        <Tag id={a.assetId} />
-                        <div className="xs muted" style={{ marginTop: 3 }}>{m?.short} · {m?.plantCode} · {a.disc} / {a.owner}</div>
+                      <td><div className="row" style={{ gap: 4, flexWrap: "nowrap" }}><Prio p={a.prio} />{a.open ? <StatusChip status={a.status} /> : <StatusChip status={a.outcome === "trip" ? "TRIP" : "MAINT"} />}</div></td>
+                      <td title={`${m?.short} · ${m?.plantCode} · ${a.disc} / ${a.owner}`}>
+                        <button className="btn sm ghost" style={{ padding: 0 }} onClick={() => go("monitor", a.assetId)}><Tag id={a.assetId} /></button>
+                        <div className="xs muted" style={{ marginTop: 2, whiteSpace: "nowrap" }}>{m?.plantCode} · {a.owner}</div>
                       </td>
-                      <td className="wrap">{a.reason}<div className="xs muted">lapis: {a.layer}{!a.open && a.closedH != null ? ` · ditutup ${fD(a.closedH)} (${a.outcome === "trip" ? "trip" : "intervensi terencana"})` : ""}</div></td>
-                      <td className="num">{fDT(a.raisedH)}<div className="xs muted">{days(a.raisedH, now)} hari lalu</div></td>
+                      <td className="wrap" title={`Lapis: ${a.layer}`}>{a.reason}{!a.open && a.closedH != null && <div className="xs muted">ditutup {fD(a.closedH)} ({a.outcome === "trip" ? "trip" : "intervensi"})</div>}</td>
+                      <td className="num">{fD(a.raisedH)}<div className="xs muted">{days(a.raisedH, now)} hari lalu</div></td>
                       <td className="num">{a.predH != null ? <>{fD(a.predH)}<div className="xs muted">{pd} hari lagi</div></> : <span className="muted">–</span>}</td>
                       <td className="r">
                         {a.open ? <><b>{usd(a.varUsd)}</b><div className="xs muted">{nf(a.p * 100)}% × {usd(a.tripLoss)}</div></> : <span className="muted">–</span>}
                         {a.oldPreRisk && <div className="xs muted" title="Skor dari matriks risiko lama di Incident Database">skor lama {a.oldPreRisk} / {a.oldScore}</div>}
                       </td>
-                      <td className="num">{a.open ? <>{fDT(a.dueH)}{a.overdue ? <div className="xs" style={{ color: "var(--crit)", fontWeight: 600 }}>Terlambat {Math.max(1, days(a.dueH, now))} hari</div>
+                      <td className="num">{a.open ? <>{fD(a.dueH)}{a.overdue ? <div className="xs" style={{ color: "var(--crit)", fontWeight: 600 }}>Terlambat {Math.max(1, days(a.dueH, now))} hari</div>
                         : <div className="xs muted">{a.dueH >= now ? `sisa ${Math.max(0, Math.round((a.dueH - now) / 24 * 10) / 10)} hari` : "sudah ditindak"}</div>}</> : <span className="muted">–</span>}</td>
                       <td className="xs">
                         {a.ack && <div>Ack: {a.ack.by}, {fDT(a.ack.h)}</div>}
@@ -115,11 +105,10 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
                         {!a.ack && a.woId == null && a.scheduledH == null && <span className="muted">belum ada</span>}
                       </td>
                       <td>
-                        <div className="row" style={{ gap: 4 }}>
+                        <div className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
                           {a.open && !a.ack && <button className="btn sm" disabled={busy === `ack-${a.id}`} onClick={() => ack(a)}>Ack</button>}
                           {a.open && a.woId == null && <button className="btn sm" disabled={busy === `wo-${a.id}`} onClick={() => mkWo(a)}>Buat WO</button>}
                           {a.open && snap!.mode === "manual" && a.scheduledH == null && <button className="btn sm primary" disabled={busy === `iv-${a.id}`} onClick={() => intervene(a)}>Intervensi</button>}
-                          <button className="btn sm ghost" onClick={() => go("monitor", a.assetId)}>Monitor</button>
                           <button className="btn sm ghost" onClick={() => go("rca", a.assetId)}>RCA</button>
                         </div>
                       </td>
@@ -130,12 +119,10 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
             </table>
           </div>
         )}
-        <div className="note">Risiko = P(gagal) × kerugian jika trip. P(gagal): P1 90%; P2 60% bila prediksi trip ≤ 45 hari, selain itu 40%; P3 15%.
-          Kolom "skor lama" menunjukkan skor matriks risiko lama untuk kejadian yang sama di Incident Database.</div>
       </Panel>
 
-      <div style={{ height: 14 }} />
-      <Panel title="Work order" sub="tersimpan di database lokal (SQLite); di pabrik diteruskan ke SAP PM / Maximo">
+      <div className="gap" />
+      <Panel title={<>Work order <Info text="Tersimpan di database lokal (SQLite). Di pabrik diteruskan ke CMMS (SAP PM / Maximo)." /></>}>
         {wos.length === 0 ? <div className="empty">Belum ada work order. Buat dari tombol "Buat WO" pada alert.</div> : (
           <div className="tbl-wrap">
             <table className="tbl">
@@ -163,11 +150,11 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
         )}
       </Panel>
 
-      <div style={{ height: 14 }} />
-      <Panel title="Pelacakan CAPA dari laporan RCA" sub={capaRows.length ? `${capaRows.length} tindakan · ${capaLate} terlambat` : "data panitia"}
-        right={<SourceBadge source="real" />}>
+      <div className="gap" />
+      <Panel title={<>Pelacakan CAPA <Info text="Tindakan dari laporan RCA yang sudah terbit (data panitia). Status kini dihitung terhadap tanggal simulasi." /></>}
+        sub={capaRows.length ? `${capaRows.length} tindakan · ${capaLate} terlambat` : undefined}>
         {capaRows.length === 0 ? (
-          <div className="empty">Belum ada laporan RCA yang terbit pada {fD(now)}. Laporan RCA pertama (PU-2101B) terbit setelah trip Februari 2026.</div>
+          <div className="empty">Belum ada laporan RCA yang terbit pada {fD(now)}.</div>
         ) : (
           <div className="tbl-wrap">
             <table className="tbl">
@@ -184,7 +171,7 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
                     <td className="num">{fD(c.dueH)}</td>
                     <td>{c.status}</td>
                     <td>
-                      <span className={`okng ${c.state === "Terlambat" ? "NG" : c.state === "Closed" ? "G" : "CEK"}`}>{c.state}</span>
+                      <span className={`okng ${c.state === "Terlambat" ? "NG" : c.state === "Closed" ? "OK" : "G"}`}>{c.state}</span>
                       {c.state === "Terlambat" && <div className="xs muted">{c.days} hari</div>}
                     </td>
                   </tr>
@@ -193,7 +180,6 @@ export default function ActionHub({ go }: { go: (p: Page, a?: string | null) => 
             </table>
           </div>
         )}
-        <div className="note">Status kini dihitung terhadap tanggal simulasi: tindakan yang belum Closed setelah tenggatnya ditandai terlambat.</div>
       </Panel>
     </>
   );

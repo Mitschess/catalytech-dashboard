@@ -35,7 +35,7 @@ const UNITS: { x: number; y: number; w: number; h: number; code: string; name: s
   { x: 24, y: 256, w: 636, h: 116, code: "NUP", name: "Utility Plant" },
 ];
 // Pipes; `by` = the monitored machine whose outage stops the flow in that pipe.
-const PIPES: { d: string; by?: string }[] = [
+const PIPES: { d: string; by?: string; cw?: boolean }[] = [
   { d: "M40 140 H114", by: "HE-3301" },
   { d: "M186 140 H244", by: "HE-3301" },
   { d: "M322 140 H356" },
@@ -49,8 +49,8 @@ const PIPES: { d: string; by?: string }[] = [
   { d: "M792 262 H838", by: "PU-2101B" },
   { d: "M882 262 H952", by: "PU-2101B" },
   { d: "M1024 262 H1140", by: undefined },
-  { d: "M232 306 H640", by: "PM-4405B" },
-  { d: "M392 306 V162", by: "PM-4405B" },
+  { d: "M232 306 H640", by: "PM-4405B", cw: true },
+  { d: "M392 306 V162", by: "PM-4405B", cw: true },
 ];
 const LABELS: { x: number; y: number; t: string; anchor?: "start" | "end" }[] = [
   { x: 40, y: 130, t: "Umpan" },
@@ -119,9 +119,9 @@ export function ProcessSchematic({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className="schem-wrap" ref={wrap} onMouseLeave={() => setTip(null)}>
-      <svg className="schem" viewBox="0 0 1180 380" role="group" aria-label="Skematik proses site dengan status lima aset yang dipantau">
+      <svg className="schem" viewBox="0 14 1180 366" role="group" aria-label="Skematik proses site dengan status lima aset yang dipantau">
         {UNITS.map((u) => (
-          <g key={u.code} className="unitbox">
+          <g key={u.code} className={`unitbox${u.code === "NUP" ? " nup" : ""}`}>
             <rect x={u.x} y={u.y} width={u.w} height={u.h} rx={10} />
             <text x={u.x + 12} y={u.y + 18}><tspan className="uc">{u.code}</tspan> · {u.name}</text>
           </g>
@@ -129,7 +129,7 @@ export function ProcessSchematic({ onOpen }: { onOpen: (id: string) => void }) {
         {PIPES.map((p, i) => {
           const on = !p.by || running(byId.get(p.by));
           return (
-            <g key={i} className={`pipe${on ? " on" : ""}`}>
+            <g key={i} className={`pipe${on ? " on" : ""}${p.cw ? " cw" : ""}`}>
               <path className="pipe-base" d={p.d} />
               <path className="pipe-flow" d={p.d} />
             </g>
@@ -147,7 +147,7 @@ export function ProcessSchematic({ onOpen }: { onOpen: (id: string) => void }) {
           const st = s?.status ?? "NODATA";
           const label = s?.health != null ? `${s.health}` : "–";
           return (
-            <g key={q.id} className={`eq st-${st}${running(s) ? "" : " stopped"}`} transform={`translate(${q.x} ${q.y})`} tabIndex={0} role="button"
+            <g key={q.id} className={`eq st-${st}${running(s) ? "" : " stopped"}${q.id === "PM-4405B" ? " cw" : ""}`} transform={`translate(${q.x} ${q.y})`} tabIndex={0} role="button"
               aria-label={`${q.id}, ${STATUS_LABEL[st]}, health ${label}. Buka monitor aset.`}
               onClick={() => onOpen(q.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(q.id); } }}
               onMouseMove={(e) => place(q.id, e)} onFocus={(e) => place(q.id, null, e.currentTarget)} onBlur={() => setTip(null)}>

@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { AlertsResp, fD, fDT, ModelRow, nf, send, usd } from "../api";
 import { useLive, useLiveFetch } from "../live";
 import type { Page } from "../App";
-import { Meter, Panel, Tag, Tile } from "../components/ui";
+import { Info, Meter, Panel, Tag, Tile } from "../components/ui";
+import { Kpi } from "../components/icons";
 
 const LAYERS: [string, string, string, string][] = [
   ["1. Kualitas data", "Sensor yang tidak berubah 6 jam (flatline) memicu alert DATA. Model AI berhenti menilai aset itu supaya sensor rusak tidak dikira kerusakan mesin.", "Tidak", "Aturan"],
@@ -38,20 +39,14 @@ export default function Models({ go }: { go: (p: Page, a?: string | null) => voi
 
   return (
     <>
-      <div className="page-head">
-        <div><div className="eyebrow">Transparansi model</div><h1>Model AI</h1>
-          <p>Model anomali dilatih otomatis dari data operasi normal setiap aset saat simulasi berjalan, tanpa contoh kegagalan.
-            Halaman ini menunjukkan apa yang dipelajari tiap model, seberapa sering ia menandai anomali, dan seberapa awal peringatan muncul sebelum trip.</p></div>
-      </div>
-
       <div className="tiles t4">
-        <Tile label="Model aktif" value={`${ready}/${models.length || snap!.kpis.models.total}`} ctx="model MSPC per aset" />
-        <Tile label="Trip pada replay ini" value={lead.length} ctx={snap!.mode === "reality" ? "mode Kenyataan: tanpa tindakan" : "sebagian dicegah oleh intervensi"} />
-        <Tile label="Median peringatan dini (5 kasus nyata)" value={medianLead != null ? `${nf(medianLead)} hari` : "–"} ctx="dari alert pertama sampai trip" tone={medianLead != null ? "good" : undefined} />
-        <Tile label="Kerugian terhindar (proyeksi)" value={usd(snap!.kpis.losses.realityEnd - snap!.kpis.losses.scenarioEnd)} ctx="5 kasus nyata, mode aktif vs kenyataan" />
+        <Tile icon={<Kpi.asset />} label="Model AI aktif" value={`${ready}/${models.length || snap!.kpis.models.total}`} ctx="MSPC per aset" />
+        <Tile icon={<Kpi.alert />} label="Trip pada replay" value={lead.length} ctx={snap!.mode === "reality" ? "tanpa tindakan" : "sebagian dicegah"} />
+        <Tile icon={<Kpi.clock />} label="Median peringatan dini" value={medianLead != null ? `${nf(medianLead)} hari` : "–"} ctx="sebelum trip" tone={medianLead != null ? "good" : undefined} />
+        <Tile icon={<Kpi.saved />} teal label="Kerugian terhindar" value={usd(snap!.kpis.losses.realityEnd - snap!.kpis.losses.scenarioEnd)} ctx="mode aktif vs kenyataan" />
       </div>
 
-      <Panel title="Status model per aset" sub="PCA dengan batas 99,9 persentil dari data latih">
+      <Panel title={<>Status model per aset <Info text="PCA + Hotelling T² + SPE, batas 99,9 persentil data latih. Jam anomali = jam di atas batas (1×); alert P2 butuh 3 jam berturut-turut. Latih ulang memakai jam normal 14 hari terakhir (min. 48 jam)." /></>}>
         {err && <div className="empty">Gagal memuat model: {err}</div>}
         {!data && !err ? <div className="empty">Memuat…</div> : (
           <div className="tbl-wrap">
@@ -94,15 +89,12 @@ export default function Models({ go }: { go: (p: Page, a?: string | null) => voi
             </table>
           </div>
         )}
-        <div className="note">Jam anomali = jam dengan skor di atas batas (1×). Satu jam di atas batas belum menjadi alert; alert P2 butuh 3 jam berturut-turut.
-          Latih ulang hanya memakai jam berstatus normal dalam 14 hari terakhir (minimal 48 jam).</div>
       </Panel>
 
-      <div style={{ height: 14 }} />
-      <Panel title="Validasi: seberapa awal SIGAP memberi peringatan sebelum trip" sub="dihitung dari replay yang sedang berjalan, hanya data sampai waktu simulasi">
+      <div className="gap" />
+      <Panel title={<>Validasi: peringatan sebelum trip <Info text="Dihitung dari replay yang sedang berjalan, hanya memakai data sampai waktu simulasi." /></>}>
         {lead.length === 0 ? (
-          <div className="empty">Belum ada trip hingga {fD(snap!.now)}{snap!.mode !== "reality" ? " (atau semua trip dicegah oleh intervensi)" : ""}.
-            Putar simulasi di mode Kenyataan melewati Maret–Juli 2026 untuk melihat lead time kelima kasus nyata.</div>
+          <div className="empty">Belum ada trip hingga {fD(snap!.now)}. Putar di mode Kenyataan sampai Juli 2026.</div>
         ) : (
           <div className="tbl-wrap">
             <table className="tbl">
@@ -124,35 +116,37 @@ export default function Models({ go }: { go: (p: Page, a?: string | null) => voi
             </table>
           </div>
         )}
-        <div className="callout" style={{ marginTop: 10 }}>
-          <b>Catatan kejujuran data.</b> Model dilatih dari 2 minggu pertama timeline, yang berupa isian dummy yang disusun dari hari-hari normal asli aset itu
-          (tanpa 3 hari menjelang trip). Pada 30 hari data PI asli, model menandai anomali 1–2 hari sebelum trip (lihat grafik Skor AI di Monitor aset), sedangkan
-          peringatan paling awal (84–105 hari) datang dari tren condition monitoring mingguan. Data PI panitia bersifat sintetis dan antar-tag hampir tidak berkorelasi,
-          sehingga di sini MSPC mirip aturan 3σ per tag; di pabrik nyata kekuatannya ada pada hubungan antar-tag (mis. ampere naik tanpa kenaikan flow).
-        </div>
+        <details className="more">
+          <summary>Catatan kejujuran data</summary>
+          <div>Model dilatih dari 2 minggu pertama timeline (isian dummy yang disusun dari hari normal asli aset itu, tanpa 3 hari menjelang trip).
+            Pada data PI asli, model menandai anomali 1–2 hari sebelum trip; peringatan paling awal (84–105 hari) datang dari tren condition monitoring mingguan.
+            Data PI panitia sintetis dan antar-tag hampir tidak berkorelasi, jadi di sini MSPC mirip aturan 3σ per tag.</div>
+        </details>
       </Panel>
 
-      <div style={{ height: 14 }} />
-      <div className="grid">
-        <Panel title="Lima lapis analitik" sub="apa yang perlu dilatih dan apa yang tidak">
+      <div className="gap" />
+      <Panel title="Cara kerja & penerapan">
+        <details className="more" style={{ marginTop: 0 }}>
+          <summary>Lima lapis analitik: mana yang perlu dilatih</summary>
           <div className="tbl-wrap">
             <table className="tbl">
-              <thead><tr><th>Lapis</th><th className="wrap">Fungsi</th><th>Perlu training?</th><th>Data yang dibutuhkan</th></tr></thead>
+              <thead><tr><th>Lapis</th><th className="wrap">Fungsi</th><th>Perlu training?</th><th>Data</th></tr></thead>
               <tbody>{LAYERS.map(([l, f, t, d]) => <tr key={l}><td><b>{l}</b></td><td className="wrap small">{f}</td><td className="small">{t}</td><td className="small">{d}</td></tr>)}</tbody>
             </table>
           </div>
-        </Panel>
-        <Panel title="Menerapkan model di pabrik" sub="dari demo ke operasi">
-          <ol className="small" style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
-            <li><b>Pilih aset & tag.</b> Mulai dari aset Class A dengan riwayat kerugian terbesar; pastikan tag wajib per jenis aset tersedia di historian.</li>
-            <li><b>Tarik 3–6 bulan data.</b> Tandai periode operasi normal (tanpa trip, start-up, atau perbaikan) sebagai data latih.</li>
-            <li><b>Latih MSPC per aset.</b> Batas 99,9 persentil, cek jumlah komponen dan variansi yang dijelaskan seperti tabel di atas.</li>
-            <li><b>Shadow mode 3 bulan.</b> Model berjalan tanpa memicu tindakan; engineer menilai setiap alert benar atau salah. Target presisi ≥ 70%.</li>
-            <li><b>Go-live dengan SLA.</b> Alert masuk Action Hub dan work order (SAP PM / Maximo), notifikasi Teams/email untuk P1.</li>
-            <li><b>Rawat model.</b> Latih ulang setelah overhaul atau perubahan titik operasi; kumpulkan label kegagalan untuk model klasifikasi mode kegagalan di tahun ke-2.</li>
+        </details>
+        <details className="more">
+          <summary>Menerapkan model di pabrik (6 langkah)</summary>
+          <ol className="small" style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 4 }}>
+            <li><b>Pilih aset & tag</b>: aset Class A dengan kerugian terbesar.</li>
+            <li><b>Tarik 3–6 bulan data</b> dan tandai periode operasi normal.</li>
+            <li><b>Latih MSPC per aset</b> dengan batas 99,9 persentil.</li>
+            <li><b>Shadow mode 3 bulan</b>: engineer menilai setiap alert (target presisi ≥ 70%).</li>
+            <li><b>Go-live dengan SLA</b>: alert ke Action Hub dan CMMS, notifikasi P1.</li>
+            <li><b>Rawat model</b>: latih ulang setelah overhaul; kumpulkan label kegagalan.</li>
           </ol>
-        </Panel>
-      </div>
+        </details>
+      </Panel>
     </>
   );
 }

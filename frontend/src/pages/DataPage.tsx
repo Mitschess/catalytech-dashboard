@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { fD, nf, UNIT_ORDER, usd } from "../api";
 import { useLive } from "../live";
 import type { Page } from "../App";
-import { Panel, SourceBadge, Tag, Tile } from "../components/ui";
+import { Info, Panel, Tag, Tile } from "../components/ui";
+import { Kpi } from "../components/icons";
 import { Coverage } from "../components/Coverage";
 
 const ARCH: [string, string, string][] = [
@@ -43,27 +44,19 @@ export default function DataPage({ go }: { go: (p: Page, a?: string | null) => v
 
   return (
     <>
-      <div className="page-head">
-        <div><div className="eyebrow">Asal-usul data</div><h1>Data & sumber</h1>
-          <p>Semua aset, kejadian, dan angka kerugian berasal dari file panitia <SourceBadge source="real" /> (Incident Database, Equipment Performance,
-            Production Data, laporan RCA). Data PI per jam panitia hanya 30 hari per aset dan bulannya berbeda-beda, jadi jam di luar periode itu diisi{" "}
-            <SourceBadge source="dummy" /> berlabel: pola operasi normal yang disusun dari hari-hari normal aset itu sendiri. Isian ini tidak pernah
-            menjadi bukti kerusakan dan tidak mengubah angka kerugian.</p></div>
-      </div>
-
       <div className="tiles t4">
-        <Tile label="Aset data panitia" value={assets.length} ctx="5 kasus RCA dengan data sensor" />
-        <Tile label="Data per jam asli" value={`${nf(share * 100)}%`} ctx={`${nf(realHours)} jam PI asli; sisanya isian dummy`} />
-        <Tile label="Insiden di database" value={nf(inc.n)} ctx={`${usd(inc.totalLoss)} total kerugian`} />
-        <Tile label="Rentang simulasi" value={`${fD(0).replace(/ \d{4}$/, "")} – ${fD(meta!.nHours - 1)}`} ctx={`${nf(meta!.nHours)} jam, diputar ulang seolah live`} />
+        <Tile icon={<Kpi.asset />} label="Aset data panitia" value={assets.length} ctx="5 kasus RCA" />
+        <Tile icon={<Kpi.chart />} label="Data per jam asli" value={`${nf(share * 100)}%`} ctx={`${nf(realHours)} jam; sisanya dummy`} />
+        <Tile icon={<Kpi.list />} label="Insiden di database" value={nf(inc.n)} ctx={`${usd(inc.totalLoss)} kerugian`} />
+        <Tile icon={<Kpi.clock />} teal label="Rentang simulasi" value={`${fD(0).replace(/ \d{4}$/, "")} – ${fD(meta!.nHours - 1)}`} ctx={`${nf(meta!.nHours)} jam`} />
       </div>
 
-      <Panel title="Cakupan data per aset" sub="data per jam asli tiap aset ada di bulan yang berbeda; isian dummy menyambungkannya menjadi satu timeline">
+      <Panel title={<>Cakupan data per aset <Info text="Semua aset, kejadian dan kerugian dari file panitia. Data PI per jam asli hanya 30 hari per aset, di bulan berbeda; jam lain diisi dummy berlabel (pola normal dari hari normal aset itu sendiri). Isian tidak pernah menjadi bukti kerusakan dan tidak mengubah kerugian." /></>}>
         <Coverage assets={assets} nHours={meta!.nHours} now={snap!.now} simStart={meta!.simStart} onOpen={(id) => go("monitor", id)} />
       </Panel>
 
-      <div style={{ height: 14 }} />
-      <Panel title="Sumber data per aset">
+      <div className="gap" />
+      <Panel title={<>Sumber data per aset <Info text="Isian dummy per jam: hari utuh diambil acak dari hari normal asli aset itu (minimal 3 hari sebelum trip) + noise kecil. Mingguan: di sekitar baseline sehat. Tes otomatis memastikan isian tidak pernah memicu alert." /></>}>
         <div className="tbl-wrap">
           <table className="tbl">
             <thead><tr><th>Aset</th><th>Unit</th><th>Jenis</th><th>Class</th><th>PI per jam asli</th><th>Condition monitoring asli</th><th>Trip nyata</th><th className="r">Sinyal</th><th>Laporan RCA</th></tr></thead>
@@ -84,13 +77,11 @@ export default function DataPage({ go }: { go: (p: Page, a?: string | null) => v
             </tbody>
           </table>
         </div>
-        <div className="note">Isian dummy per jam: hari-hari utuh diambil acak dari hari normal aset itu di data PI asli (berjalan, dan minimal 3 hari sebelum trip), ditambah noise kecil.
-          Isian mingguan: di sekitar baseline sehat (rata-rata 4 pembacaan asli pertama). Tes otomatis memastikan isian tidak pernah memicu alert.</div>
       </Panel>
 
-      <div style={{ height: 14 }} />
+      <div className="gap" />
       <div className="grid g2">
-        <Panel title="Status insiden di database" sub="Jan 2024 – Jul 2026" right={<SourceBadge source="real" />}>
+        <Panel title="Status insiden" sub="Jan 2024 – Jul 2026">
           <div className="tbl-wrap">
             <table className="tbl">
               <thead><tr><th>Status</th><th className="r">Insiden</th><th className="r">Kerugian</th><th style={{ width: "35%" }} /></tr></thead>
@@ -107,17 +98,16 @@ export default function DataPage({ go }: { go: (p: Page, a?: string | null) => v
               </tbody>
             </table>
           </div>
-          <div className="note">{inc.rcaOverdue} dari {inc.rcaStage} insiden di tahap RCA sudah lewat tenggat (median {nf(inc.overdueMedianDays)} hari).
-            Korelasi skor risiko lama terhadap kerugian nyata: ρ = {nf(inc.spearman, 2)}.</div>
+          <div className="note">RCA lewat tenggat: {inc.rcaOverdue}/{inc.rcaStage} · skor lama vs kerugian ρ = {nf(inc.spearman, 2)}</div>
         </Panel>
-        <Panel title="Backlog RCA terbesar" sub="diurutkan menurut kerugian" right={<SourceBadge source="real" />}>
+        <Panel title="Backlog RCA terbesar" sub="menurut kerugian">
           <div className="tbl-wrap">
             <table className="tbl">
-              <thead><tr><th>Tag</th><th className="wrap">Judul</th><th>Plant</th><th>Skor lama</th><th className="r">Kerugian</th><th className="r">Terlambat</th></tr></thead>
+              <thead><tr><th>Judul</th><th>Skor lama</th><th className="r">Kerugian</th><th className="r">Terlambat</th></tr></thead>
               <tbody>
-                {inc.backlog.map((b) => (
+                {inc.backlog.slice(0, 10).map((b) => (
                   <tr key={b.id}>
-                    <td><Tag id={b.tag} /></td><td className="small">{b.title}<div className="xs muted">{b.status}</div></td><td className="small">{b.plant}</td>
+                    <td className="small" title={b.plant}>{b.title}<div className="xs muted">{b.status}</div></td>
                     <td className="small">{b.prerisk} / {b.score}</td><td className="r">{usd(b.loss)}</td>
                     <td className="r">{b.overdueDays != null ? `${nf(b.overdueDays)} hari` : "–"}</td>
                   </tr>
@@ -128,25 +118,26 @@ export default function DataPage({ go }: { go: (p: Page, a?: string | null) => v
         </Panel>
       </div>
 
-      <div style={{ height: 14 }} />
-      <Panel title="Arsitektur: demo ini vs penerapan di pabrik" sub="struktur kode sama; hanya komponen di kolom kanan yang diganti">
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead><tr><th>Komponen</th><th className="wrap">Demo (laptop)</th><th className="wrap">Produksi (server internal pabrik)</th></tr></thead>
-            <tbody>{ARCH.map(([c, d, p]) => <tr key={c}><td><b>{c}</b></td><td className="wrap small">{d}</td><td className="wrap small">{p}</td></tr>)}</tbody>
-          </table>
-        </div>
-        <div className="note">Konektor historian cukup mengganti kelas <span className="mono">SimulatedHistorian</span> di <span className="mono">backend/app/sources/historian.py</span>; analitik, alert, dan dashboard tidak berubah.</div>
-      </Panel>
-
-      <div style={{ height: 14 }} />
-      <Panel title="API untuk integrasi" sub="dokumentasi interaktif lengkap di /docs (Swagger)">
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead><tr><th>Metode</th><th>Endpoint</th><th className="wrap">Fungsi</th></tr></thead>
-            <tbody>{API.map(([m, p, d]) => <tr key={p + m}><td className="mono xs">{m}</td><td className="mono xs">{p}</td><td className="wrap small">{d}</td></tr>)}</tbody>
-          </table>
-        </div>
+      <div className="gap" />
+      <Panel title="Arsitektur & integrasi">
+        <details className="more" style={{ marginTop: 0 }}>
+          <summary>Demo ini vs penerapan di pabrik</summary>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead><tr><th>Komponen</th><th className="wrap">Demo (laptop)</th><th className="wrap">Produksi (server pabrik)</th></tr></thead>
+              <tbody>{ARCH.map(([c, d, p]) => <tr key={c}><td><b>{c}</b></td><td className="wrap small">{d}</td><td className="wrap small">{p}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </details>
+        <details className="more">
+          <summary>API untuk integrasi (dokumentasi lengkap di /docs)</summary>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead><tr><th>Metode</th><th>Endpoint</th><th className="wrap">Fungsi</th></tr></thead>
+              <tbody>{API.map(([m, p, d]) => <tr key={p + m}><td className="mono xs">{m}</td><td className="mono xs">{p}</td><td className="wrap small">{d}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </details>
       </Panel>
     </>
   );

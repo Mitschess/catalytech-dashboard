@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AssetMeta, cssVar, days, fD, fDT, fv, getJSON, History, MODE_LABEL, nf, Samples, send, SignalDef, UNIT_ORDER, usd } from "../api";
+import { AssetMeta, cssVar, days, fD, fDT, fv, getJSON, History, nf, Samples, send, SignalDef, UNIT_ORDER, usd } from "../api";
 import { useLive } from "../live";
 import type { Page } from "../App";
 import { EChart } from "../components/EChart";
 import { alpha, Band, hBars, Line, projection, Ref, timeChart } from "../charts";
-import { EventRow, Meter, Panel, Prio, SourceBadge, StatusChip } from "../components/ui";
+import { EventRow, Info, Num, Panel, Prio, StatusChip } from "../components/ui";
 
 const WINDOWS: [number, string][] = [[168, "7 hari"], [720, "30 hari"], [2160, "90 hari"]];
 const MAX_STEP1 = 1500; // the backend returns every hour up to this many hours, then downsamples
@@ -109,84 +109,71 @@ export default function Monitor({ assetId, go }: { assetId: string | null; go: (
   const md = hist?.model;
   const canIntervene = snap!.mode === "manual" && st.scheduledH == null && st.status !== "TRIP" && st.status !== "MAINT";
 
+  const modelTxt = md?.ready
+    ? `dilatih ${md.n} jam ${md.realShare === 0 ? "(isian dummy)" : md.realShare != null && md.realShare < 1 ? `(${nf(md.realShare * 100)}% PI asli)` : "(PI asli)"} · ${md.k} komponen · ${nf((md.explained ?? 0) * 100)}% variansi`
+    : md && md.progress > 0 ? `belajar ${nf(md.progress * 100)}%` : "menunggu data";
+  const dataTxt = `Data asli: PI per jam ${hw ? `${fD(hw[0])}–${fD(hw[1])}` : "–"}, mingguan ${ww ? `${fD(ww[0])}–${fD(ww[1])}` : "–"}. `
+    + "Di luar itu garis ungu = isian dummy (pola normal dari hari normal aset ini). Tanda kerusakan hanya dari data asli.";
+
   return (
     <>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Monitor aset</div>
-          <h1 className="row" style={{ gap: 10 }}>{m.id} · {m.short} <SourceBadge source={m.source} /></h1>
-          <div className="head-facts">
-            <span>Class <b>{m.cls}</b> ({m.crit})</span><span>{m.plant}</span><span>Disiplin/PIC <b>{m.disc} / {m.pic}</b></span>
-            <span>Cadangan <b>{m.spare}</b></span><span>Jika trip <b>{usd(m.tripLoss)}</b> ({fv(m.tripHours)} jam × {usd(m.lossPerH)}/jam)</span>
-            <span>Intervensi terencana <b>{usd(m.plannedLoss)}</b></span>
-          </div>
+      <div className="toolbar">
+        <select className="sel" aria-label="Pilih aset" value={id} onChange={(e) => go("monitor", e.target.value)}>
+          {options.map((a) => <option key={a.id} value={a.id}>{a.plantCode} · {a.id} · {a.short}</option>)}
+        </select>
+        <h2>{m.id} <span className="muted" style={{ fontWeight: 500 }}>· {m.short}</span></h2>
+        <Info text={dataTxt} />
+        <div className="facts">
+          <span>Class <b>{m.cls}</b></span><span>PIC <b>{m.pic}</b></span><span>Cadangan <b>{m.spare}</b></span>
+          <span>Jika trip <b>{usd(m.tripLoss)}</b></span><span>Intervensi <b>{usd(m.plannedLoss)}</b></span>
         </div>
-        <div className="row">
-          <select className="sel" aria-label="Pilih aset" value={id} onChange={(e) => go("monitor", e.target.value)}>
-            {options.map((a) => <option key={a.id} value={a.id}>{a.plantCode} · {a.id} · {a.short}</option>)}
-          </select>
-          <div className="seg" role="group" aria-label="Rentang waktu">
-            {WINDOWS.map(([h, l]) => <button key={h} aria-pressed={hours === h} onClick={() => setHours(h)}>{l}</button>)}
-          </div>
+        <span className="sp" />
+        <div className="seg" role="group" aria-label="Rentang waktu">
+          {WINDOWS.map(([h, l]) => <button key={h} aria-pressed={hours === h} onClick={() => setHours(h)}>{l}</button>)}
         </div>
       </div>
 
-      <div className="banner">
-        <div><div className="big">{st.health ?? "–"}</div><div className="xs muted">health index</div></div>
+      <div className={`banner st-b-${st.status}`}>
+        <div><div className="big"><Num value={st.health} fmt={(v) => nf(v)} /></div><div className="xs muted">health</div></div>
         <div style={{ minWidth: 0 }}>
-          <div className="row" style={{ marginBottom: 4 }}><StatusChip status={st.status} /><Prio p={st.prio} />{st.layer && <span className="xs muted">lapis: {st.layer}</span>}</div>
-          <div className="why">{st.reason || (st.dq ? `Sensor ${st.dq.join(", ")} bermasalah (flatline). Model AI berhenti menilai aset ini sampai sensor pulih.`
-            : st.status === "NODATA" ? "Belum ada data kondisi pada waktu simulasi ini." : "Semua parameter dalam pola normal.")}</div>
-          <div style={{ marginTop: 6, maxWidth: 360 }}><Meter value={st.health} status={st.status} /></div>
+          <div className="row" style={{ marginBottom: 3 }}><StatusChip status={st.status} /><Prio p={st.prio} />{st.layer && <span className="xs muted">{st.layer}</span>}
+            {st.realNow ? <span className="src real">PI asli</span> : <span className="src dummy">Dummy</span>}</div>
+          <div className="why">{st.reason || (st.dq ? `Sensor ${st.dq.join(", ")} flatline; AI berhenti menilai sampai sensor pulih.` : "Semua parameter normal.")}</div>
+          <div className="row" style={{ marginTop: 7, gap: 6 }}>
+            <button className="btn sm primary" onClick={() => go("rca", id)}>AI RCA</button>
+            <button className="btn sm" onClick={() => go("alerts")}>Action Hub</button>
+            {snap!.mode === "manual"
+              ? <button className="btn sm" disabled={!canIntervene || sending} onClick={intervene} title="Mulai intervensi terencana pada jam berikutnya">
+                {st.scheduledH != null ? `Intervensi ${fDT(st.scheduledH)}` : "Intervensi sekarang"}</button>
+              : <span className="xs muted" title="Pilih mode Manual di bilah atas untuk menjadwalkan intervensi sendiri">intervensi: mode Manual</span>}
+            {!st.realNow && hw && <button className="btn sm ghost" onClick={() => seekTo(Math.min(hw[0] + 24 * 7, hw[1]))}>Lompat ke data PI asli</button>}
+          </div>
         </div>
         <div className="pred">
-          {st.status === "MAINT" ? <>Intervensi terencana berjalan<b>{m.plannedAction}</b></>
-            : st.predH != null ? <>Prediksi melewati batas trip<b>{fD(st.predH)}</b>{predDays} hari lagi bila tidak ada tindakan</>
+          {st.status === "MAINT" ? <>Intervensi berjalan<b>{fDT(st.scheduledH)}</b></>
+            : st.predH != null ? <>Prediksi trip<b>{fD(st.predH)}</b>{predDays} hari lagi</>
               : st.scheduledH != null ? <>Intervensi dijadwalkan<b>{fDT(st.scheduledH)}</b></>
-                : <>Prediksi trip<b>tidak ada</b>tren menuju batas trip belum terlihat</>}
+                : <>Prediksi trip<b>tidak ada</b></>}
         </div>
       </div>
 
-      <div className="row" style={{ marginBottom: 14 }}>
-        <button className="btn primary" onClick={() => go("rca", id)}>Analisis akar masalah (AI RCA)</button>
-        <button className="btn" onClick={() => go("alerts")}>Buka Action Hub</button>
-        {snap!.mode === "manual"
-          ? <button className="btn" disabled={!canIntervene || sending} onClick={intervene} title="Mulai intervensi terencana pada jam simulasi berikutnya">
-            {st.scheduledH != null ? `Intervensi dijadwalkan ${fDT(st.scheduledH)}` : "Jadwalkan intervensi sekarang"}</button>
-          : <span className="small muted">Mode {MODE_LABEL[snap!.mode]}: intervensi manual tersedia di mode Manual (bilah atas).</span>}
-        <span className="sp" />
-        <span className="small muted">
-          {md?.ready ? `Model AI aktif: dilatih dari ${md.n} jam operasi normal${md.trainedRange ? ` (${fD(md.trainedRange[0])}–${fD(md.trainedRange[1])})` : ""}${md.realShare === 0 ? " berupa isian dummy" : md.realShare != null && md.realShare < 1 ? ` (${nf(md.realShare * 100)}% PI asli)` : ""}, ${md.k} komponen, ${nf((md.explained ?? 0) * 100)}% variansi`
-            : md && md.progress > 0 ? `Model AI sedang belajar: ${nf(md.progress * 100)}% dari ${md.nTrain} jam data normal` : "Model AI menunggu data per jam"}
-        </span>
-      </div>
-
-      <div className="callout" style={{ marginBottom: 14 }}>
-        <b>Kejadian nyata dari data panitia{m.ar ? ` (laporan RCA ${m.ar})` : ""}.</b> Data asli: PI per jam <b>{hw ? `${fD(hw[0])}–${fD(hw[1])}` : "–"}</b>,
-        condition monitoring mingguan <b>{ww ? `${fD(ww[0])}–${fD(ww[1])}` : "–"}</b>. Di luar periode itu grafik memakai <span className="src dummy">isian dummy</span>{" "}
-        (garis ungu): pola operasi normal yang disusun dari hari-hari normal aset ini sendiri, supaya kelima aset berjalan pada satu jam simulasi.
-        Tanda kerusakan hanya berasal dari data asli.{m.oldPreRisk && <> Skor risiko lama: Pre-Risk {m.oldPreRisk}, skor {m.oldScore}.</>}
-      </div>
-
-      {err && <div className="empty" style={{ marginBottom: 14 }}>Gagal memuat riwayat aset: {err}</div>}
+      {err && <div className="empty" style={{ marginBottom: 12 }}>Gagal memuat riwayat aset: {err}</div>}
 
       {m.weekly.length > 0 && (
-        <Panel title="Condition monitoring mingguan" sub="pembacaan rute + proyeksi tren kuadratik menuju batas trip">
-          <div className="charts2">
+        <Panel title={<>Condition monitoring mingguan <Info text="Pembacaan rute mingguan. Garis putus-putus = proyeksi tren kuadratik menuju batas trip." /></>} sub={<Legend proj dummy />}>
+          <div className="charts2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))" }}>
             {m.weekly.map((s, k) => (
               <div className="cbox" key={s.key}>
-                <div className="ch"><b>{s.name}</b><span className="cv">{hist?.cm.length ? `${fv(hist.cm[hist.cm.length - 1].v[k])} ${s.unit}` : "–"}</span></div>
-                {charts?.weekly[k] ? <EChart option={charts.weekly[k]} height={170} label={`Tren mingguan ${s.name}`} /> : <div className="empty">Memuat…</div>}
+                <div className="ch"><b title={s.name}>{s.name}</b><span className="cv">{hist?.cm.length ? `${fv(hist.cm[hist.cm.length - 1].v[k])} ${s.unit}` : "–"}</span></div>
+                {charts?.weekly[k] ? <EChart option={charts.weekly[k]} height={140} label={`Tren mingguan ${s.name}`} /> : <div className="empty">Memuat…</div>}
               </div>
             ))}
           </div>
-          <Legend proj dummy />
         </Panel>
       )}
 
-      <div style={{ height: 14 }} />
-      <Panel title="Sinyal proses per jam" sub={st.realNow ? "jam ini: PI historian asli (data panitia)" : "jam ini: isian dummy"}
-        right={!st.realNow && hw ? <button className="btn sm" onClick={() => seekTo(Math.min(hw[0] + 24 * 7, hw[1]))}>Lompat ke data PI asli ({fD(hw[0])})</button> : undefined}>
+      <div className="gap" />
+      <Panel title="Sinyal proses per jam" sub={<Legend dummy train />}>
         <div className="charts2">
           {m.hourly.map((s, k) => {
             const col = hist?.values[k] ?? [];
@@ -194,51 +181,44 @@ export default function Monitor({ assetId, go }: { assetId: string | null; go: (
             for (let i = col.length - 1; i >= 0; i--) if (col[i] != null) { lastV = col[i]; break; }
             return (
               <div className="cbox" key={s.key}>
-                <div className="ch"><b>{s.name}{!s.mspc && <span className="muted" style={{ fontWeight: 400 }}> · konteks, bukan input AI</span>}</b><span className="cv">{fv(lastV)} {s.unit}</span></div>
-                {charts?.hourly[k] ? <EChart option={charts.hourly[k]} height={160} label={`Sinyal per jam ${s.name}`} /> : <div className="empty">Memuat…</div>}
+                <div className="ch"><b title={s.mspc ? s.name : `${s.name} (konteks, bukan input AI)`}>{s.name}{!s.mspc && <span className="muted" style={{ fontWeight: 400 }}> · konteks</span>}</b><span className="cv">{fv(lastV)} {s.unit}</span></div>
+                {charts?.hourly[k] ? <EChart option={charts.hourly[k]} height={128} label={`Sinyal per jam ${s.name}`} /> : <div className="empty">Memuat…</div>}
               </div>
             );
           })}
         </div>
-        <Legend train dummy proj={m.hourly.some((s) => s.trip != null)} />
       </Panel>
 
-      <div style={{ height: 14 }} />
-      <div className="grid g2">
-        <Panel title="Skor anomali AI (MSPC)" sub="rasio T² / SPE terhadap batas 99,9% data normal · skala log">
-          {charts?.ai ? <EChart option={charts.ai} height={220} label="Skor anomali model AI" /> : <div className="empty">Memuat…</div>}
-          <div className="note">Di atas 1× selama 3 jam berturut-turut: alert P2. Di atas 5× dan dikonfirmasi lapis batas/tren: P1.</div>
+      <div className="gap" />
+      <div className="grid g3">
+        <Panel title={<>Skor anomali AI <Info text="Rasio T²/SPE terhadap batas 99,9% data normal (skala log). Di atas 1× selama 3 jam = alert P2; di atas 5× dan dikonfirmasi lapis lain = P1." /></>} sub={modelTxt}>
+          {charts?.ai ? <EChart option={charts.ai} height={180} label="Skor anomali model AI" /> : <div className="empty">Memuat…</div>}
         </Panel>
-        <Panel title="Kontributor anomali" sub={hist?.contrib ? `${hist.contrib.stat} ${nf(hist.contrib.ratio, 2)}× batas · ${fDT(hist.contrib.h)}` : "belum ada skor"}>
-          {charts?.contrib ? <EChart option={charts.contrib} height={220} label="Kontribusi tiap sinyal terhadap skor anomali" />
-            : <div className="empty">Kontribusi muncul setelah model AI selesai dilatih dan mulai menilai data.</div>}
-          <div className="note">Sinyal dengan porsi terbesar adalah titik awal pemeriksaan di lapangan, bukan akar masalah final.</div>
+        <Panel title={<>Kontributor anomali <Info text="Porsi tiap sinyal pada skor anomali terakhir: titik awal pemeriksaan di lapangan, bukan akar masalah final." /></>}
+          sub={hist?.contrib ? `${hist.contrib.stat} ${nf(hist.contrib.ratio, 2)}× · ${fDT(hist.contrib.h)}` : undefined}>
+          {charts?.contrib ? <EChart option={charts.contrib} height={180} label="Kontribusi tiap sinyal terhadap skor anomali" /> : <div className="empty">Menunggu model AI.</div>}
+        </Panel>
+        <Panel title="Kejadian aset" sub={`${events.length}`}>
+          <div className="feed" style={{ maxHeight: 190 }}>
+            {events.length ? events.map((e, i) => <EventRow key={`${e.h}-${i}`} e={e} showAsset={false} />) : <div className="empty">Belum ada kejadian.</div>}
+          </div>
         </Panel>
       </div>
-
-      <div style={{ height: 14 }} />
-      <Panel title="Log kejadian aset" sub={`${events.length} kejadian`}>
-        <div className="feed" style={{ maxHeight: 360 }}>
-          {events.length ? events.map((e, i) => <EventRow key={`${e.h}-${i}`} e={e} showAsset={false} />) : <div className="empty">Belum ada kejadian untuk aset ini.</div>}
-        </div>
-      </Panel>
     </>
   );
 }
 
 function Legend({ train, proj, dummy }: { train?: boolean; proj?: boolean; dummy?: boolean }) {
   return (
-    <div className="legend">
-      <span><i style={{ borderColor: "var(--s1)" }} />nilai asli (data panitia)</span>
-      {dummy && <span><i style={{ borderColor: "var(--dummy)" }} />isian dummy</span>}
+    <span className="legend" style={{ marginTop: 0 }}>
+      <span><i style={{ borderColor: "var(--s1)" }} />asli</span>
+      {dummy && <span><i style={{ borderColor: "var(--dummy)" }} />dummy</span>}
       <span><i style={{ borderColor: "var(--ink-3)", borderTopStyle: "dashed" }} />baseline</span>
-      <span><i style={{ borderColor: "var(--alarm)" }} />batas alarm</span>
+      <span><i style={{ borderColor: "var(--alarm)" }} />alarm</span>
       <span><i style={{ borderColor: "var(--crit)" }} />batas trip</span>
-      {proj && <span><i style={{ borderColor: "var(--s2)", borderTopStyle: "dashed" }} />proyeksi tren</span>}
+      {proj && <span><i style={{ borderColor: "var(--s2)", borderTopStyle: "dashed" }} />proyeksi</span>}
       {train && <span><i className="sq" style={{ background: "var(--band-train)", outline: "1px solid var(--good)" }} />data latih AI</span>}
-      <span><i className="sq" style={{ background: alpha(cssVar("--crit") || "#d03b3b", 0.25) }} />trip</span>
-      <span><i className="sq" style={{ background: alpha(cssVar("--good") || "#0ca30c", 0.25) }} />intervensi terencana</span>
-    </div>
+    </span>
   );
 }
 

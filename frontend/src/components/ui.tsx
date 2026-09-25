@@ -30,8 +30,17 @@ export function SourceBadge({ source }: { source: Source }) {
   return source === "dummy" ? <span className="src dummy" title="Data dummy (simulasi), bukan data panitia">Dummy</span>
     : <span className="src real" title="Data asli dari panitia">Data panitia</span>;
 }
-export function Tile({ label, value, ctx, tone }: { label: string; value: ReactNode; ctx?: ReactNode; tone?: "warn" | "good" }) {
-  return <div className={`tile${tone ? " " + tone : ""}`}><div className="lbl">{label}</div><div className="val">{value}</div>{ctx && <div className="ctx">{ctx}</div>}</div>;
+export function Tile({ label, value, ctx, tone, icon, teal, hint }: { label: string; value: ReactNode; ctx?: ReactNode; tone?: "warn" | "good"; icon?: ReactNode; teal?: boolean; hint?: string }) {
+  return (
+    <div className={`tile${tone ? " " + tone : ""}`} title={hint}>
+      {icon && <div className={`ico${teal ? " teal" : ""}`}>{icon}</div>}
+      <div className="lbl">{label}</div><div className="val">{value}</div>{ctx && <div className="ctx">{ctx}</div>}
+    </div>
+  );
+}
+/** Small "i" badge; the explanation shows on hover (keeps panels free of long notes). */
+export function Info({ text }: { text: string }) {
+  return <span className="info" title={text} aria-label={text} role="img">i</span>;
 }
 export function Meter({ value, status }: { value: number | null; status: string }) {
   return <div className={`meter ${status}`}><span style={{ width: `${value ?? 0}%` }} /></div>;

@@ -15,3 +15,15 @@ export const CollapseIcon = ({ open }: { open: boolean }) => (
   <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2" {...P} /><path d="M7.5 3v14" {...P} />
     <path d={open ? "m13 8-2 2 2 2" : "m11 8 2 2-2 2"} {...P} /></svg>
 );
+
+// Small icons for KPI tiles.
+export const Kpi = {
+  asset: () => <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" {...P} /><path d="M10 2.5v2.3M10 15.2v2.3M2.5 10h2.3M15.2 10h2.3M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6" {...P} /></svg>,
+  alert: () => <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3 18 16.5H2Z" {...P} /><path d="M10 8v4M10 14.3v.2" {...P} /></svg>,
+  risk: () => <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.8 6.4c-.5-1-1.6-1.6-2.8-1.6-1.6 0-2.9.9-2.9 2.2 0 3 5.9 1.4 5.9 4.4 0 1.3-1.3 2.3-3 2.3-1.3 0-2.5-.7-3-1.7M10 3v1.8M10 15.3V17" {...P} /></svg>,
+  clock: () => <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" {...P} /><path d="M10 6v4l2.8 1.8" {...P} /></svg>,
+  loss: () => <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5 8 11l3-3 6.5 6.5" {...P} /><path d="M13 14.5h4.5V10" {...P} /></svg>,
+  saved: () => <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 16 5v4.6c0 3.6-2.5 6.4-6 7.9-3.5-1.5-6-4.3-6-7.9V5Z" {...P} /><path d="m7.2 10 2 2 3.8-3.8" {...P} /></svg>,
+  list: () => <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5.5h10M7 10h10M7 14.5h10" {...P} /><circle cx="3.8" cy="5.5" r=".9" {...P} /><circle cx="3.8" cy="10" r=".9" {...P} /><circle cx="3.8" cy="14.5" r=".9" {...P} /></svg>,
+  chart: () => <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 16.5h14M5.5 13.5v-4M10 13.5V5.5M14.5 13.5v-6" {...P} /></svg>,
+};
