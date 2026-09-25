@@ -215,7 +215,9 @@ async def control(body: ControlBody):
             eng.running = False
             res = eng.advance(eng.now + max(1, int(float(v))), pause=False)
         elif a == "seek" and v is not None:
+            was_running = eng.running
             eng.seek(int(float(v)))
+            eng.running = was_running and eng.now < N_HOURS - 1   # keep playing after a jump, like a media player
         elif a == "mode" and v in ("reality", "auto", "manual"):
             eng.set_mode(str(v))
         elif a == "pauseOnAlert":

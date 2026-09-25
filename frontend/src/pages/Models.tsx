@@ -42,7 +42,7 @@ export default function Models({ go }: { go: (p: Page, a?: string | null) => voi
         <Tile label="Model AI aktif" value={`${ready}/${models.length || snap!.kpis.models.total}`} ctx="MSPC per aset" />
         <Tile label="Trip pada replay" value={lead.length} ctx={snap!.mode === "reality" ? "tanpa tindakan" : "sebagian dicegah"} />
         <Tile label="Median peringatan dini" value={medianLead != null ? `${nf(medianLead)} hari` : "–"} ctx="sebelum trip" tone={medianLead != null ? "good" : undefined} />
-        <Tile label="Kerugian terhindar" value={usd(snap!.kpis.losses.realityEnd - snap!.kpis.losses.scenarioEnd)} ctx="mode aktif vs kenyataan" />
+        <Tile label="Kerugian terhindar" value={usd(snap!.kpis.losses.realityEnd - snap!.kpis.losses.scenarioEnd)} ctx="mode aktif vs Real" />
       </div>
 
       <Panel title={<>Status model per aset <Info text="PCA + Hotelling T² + SPE, batas 99,9 persentil data latih. Jam anomali = jam di atas batas (1×); alert P2 butuh 3 jam berturut-turut. Latih ulang memakai jam normal 14 hari terakhir (min. 48 jam)." /></>}>
@@ -93,7 +93,7 @@ export default function Models({ go }: { go: (p: Page, a?: string | null) => voi
       <div className="gap" />
       <Panel title={<>Validasi: peringatan sebelum trip <Info text="Dihitung dari replay yang sedang berjalan, hanya memakai data sampai waktu simulasi." /></>}>
         {lead.length === 0 ? (
-          <div className="empty">Belum ada trip hingga {fD(snap!.now)}. Putar di mode Kenyataan sampai Juli 2026.</div>
+          <div className="empty">Belum ada trip hingga {fD(snap!.now)}. Putar di mode Real sampai Juli 2026.</div>
         ) : (
           <div className="tbl-wrap">
             <table className="tbl">

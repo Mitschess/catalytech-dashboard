@@ -3,6 +3,8 @@ import { AssetMeta, EventItem, getJSON, Meta, Samples, send, setSimStart, Snapsh
 
 type Conn = "connecting" | "open" | "closed";
 export interface Toast { id: number; ev: EventItem }
+/** Why the simulation stopped by itself: the alert that triggered "pause on alert". */
+export interface PauseInfo { h: number; ev: EventItem | null }
 interface LiveCtx {
   meta: Meta | null;
   snap: Snapshot | null;
@@ -13,6 +15,7 @@ interface LiveCtx {
   subscribe: (assetId: string | null) => void;
   onSamples: (fn: (s: Samples) => void) => () => void;
   toasts: Toast[];
+  pauseInfo: PauseInfo | null;
   dismiss: (id: number) => void;
   refresh: () => Promise<void>;
   notify: (text: string) => void;
@@ -25,6 +28,7 @@ export const useLive = () => {
 };
 
 const TOAST_TYPES = new Set(["ALARM", "CRITICAL", "TRIP", "MAINT", "DATA"]);
+const STOPPERS = new Set(["ALARM", "CRITICAL", "TRIP", "MAINT"]);   // same list as the engine's pause-on-alert
 let toastId = 0;
 
 export function LiveProvider({ children }: { children: ReactNode }) {
@@ -33,6 +37,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [conn, setConn] = useState<Conn>("connecting");
   const [busy, setBusy] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [pauseInfo, setPauseInfo] = useState<PauseInfo | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const subRef = useRef<string | null>(null);
   const listeners = useRef(new Set<(s: Samples) => void>());
@@ -68,8 +73,13 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         if (msg.type === "snapshot") {
           const { type: _t, ...s } = msg;
           setSnap(s as Snapshot);
+          if (s.running) setPauseInfo(null);
         } else if (msg.type === "tick") {
-          const { type: _t, newEvents, samples, paused: _p, ...rest } = msg;
+          const { type: _t, newEvents, samples, paused, ...rest } = msg;
+          if (paused != null) {
+            const ev = [...((newEvents ?? []) as EventItem[])].reverse().find((e) => STOPPERS.has(e.type)) ?? null;
+            setPauseInfo({ h: paused, ev });
+          } else if (rest.running) setPauseInfo(null);
           setSnap((prev) => ({ ...(prev as Snapshot), ...rest, events: [...(prev?.events ?? []), ...(newEvents as EventItem[])].slice(-300) }));
           if (newEvents?.length) pushToasts(newEvents);
           if (samples) listeners.current.forEach((fn) => fn(samples as Samples));
@@ -86,6 +96,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
 
   const control = useCallback(async (action: string, value?: unknown) => {
     const slow = ["seek", "mode", "reset"].includes(action);
+    if (["play", "seek", "mode", "reset", "step"].includes(action)) setPauseInfo(null);
     if (slow) setBusy(action === "mode" ? "Menghitung ulang skenario…" : "Memutar ulang data…");
     try { await send("/api/sim/control", "POST", { action, value }); } finally { if (slow) setBusy(null); }
   }, []);
@@ -106,7 +117,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   }, [snap?.now]);
   const byId = useMemo(() => new Map((meta?.assets ?? []).map((a) => [a.id, a])), [meta]);
   const value: LiveCtx = {
-    meta, snap, conn, busy, assetMeta: (id) => byId.get(id), control, subscribe, onSamples, toasts,
+    meta, snap, conn, busy, assetMeta: (id) => byId.get(id), control, subscribe, onSamples, toasts, pauseInfo,
     dismiss: (id) => setToasts((t) => t.filter((x) => x.id !== id)), refresh, notify,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

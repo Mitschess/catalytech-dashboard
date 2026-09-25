@@ -58,12 +58,10 @@ p { margin: 0; }
 .side { position: sticky; top: 0; height: 100vh; overflow-y: auto; overflow-x: hidden; background: var(--side-bg); color: var(--side-ink);
   display: flex; flex-direction: column; padding: 10px 10px 12px; scrollbar-width: thin; scrollbar-color: #2a4058 transparent; z-index: 40; }
 .side-head { display: flex; align-items: center; gap: 4px; min-height: 42px; }
-.brand { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 4px; cursor: pointer; text-align: left; min-width: 0; flex: 1; color: inherit; }
-.brand svg { width: 30px; height: 30px; color: #6fb6ff; flex: none; }
-.brand-t { display: grid; min-width: 0; }
-.brand-name { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: .03em; white-space: nowrap; line-height: 1.1; color: #fff; }
-.brand-name span { color: #6fb6ff; font-weight: 600; }
-.brand-sub { font-size: 10.5px; color: var(--side-ink-2); white-space: nowrap; }
+.brand { display: grid; gap: 3px; justify-items: start; background: none; border: 0; padding: 4px 4px 2px; cursor: pointer; text-align: left; min-width: 0; flex: 1; color: inherit; }
+.brand-full { display: block; height: 28px; width: auto; max-width: 100%; }
+.brand-icon { display: none; width: 30px; height: 30px; }
+.brand-sub { font-size: 10.5px; color: var(--side-ink-2); white-space: nowrap; letter-spacing: .02em; }
 .side .btn.ghost { color: var(--side-ink-2); }
 .side .btn.ghost:hover { background: var(--side-hover); color: #fff; }
 .side-nav { display: grid; gap: 2px; margin-top: 8px; }
@@ -100,9 +98,10 @@ p { margin: 0; }
 @media (min-width: 961px) {
   .shell.min { grid-template-columns: 62px minmax(0, 1fr); }
   .shell.min .side { padding: 10px 8px; }
-  .shell.min .brand-t, .shell.min .nav-t, .shell.min .unit-n, .shell.min .asset-t, .shell.min .asset-h, .shell.min .side-foot { display: none; }
+  .shell.min .brand-full, .shell.min .brand-sub, .shell.min .nav-t, .shell.min .unit-n, .shell.min .asset-t, .shell.min .asset-h, .shell.min .side-foot { display: none; }
   .shell.min .side-head { flex-direction: column; }
   .shell.min .brand { flex: none; }
+  .shell.min .brand-icon { display: block; }
   .shell.min .nav-i { justify-content: center; padding: 9px 0; }
   .shell.min .nav-i[aria-current="page"]::before { left: -8px; }
   .shell.min .nav-i .count { position: absolute; top: 1px; right: 3px; padding: 0 4px; font-size: 9.5px; }
@@ -120,13 +119,22 @@ p { margin: 0; }
 .sim { display: flex; align-items: center; gap: 6px; }
 .sim-date { font-family: var(--f-display); font-weight: 600; font-size: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; padding: 0 4px; min-width: 132px; }
 .sim-date small { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); font-weight: 400; margin-left: 4px; }
-.scrub { flex: 1 1 160px; min-width: 120px; display: grid; }
+.scrub { flex: 1 1 160px; min-width: 120px; display: grid; position: relative; }
+/* notes under the slider float, so the slider never moves when they appear */
+.scrub > .busy, .scrub > .paused-note { position: absolute; left: 0; right: 0; top: calc(100% + 1px); }
 .scrub input[type=range] { width: 100%; margin: 0; accent-color: var(--accent); }
 .busy { font-size: 11px; color: var(--accent); white-space: nowrap; }
+.paused-note { border: 0; background: none; padding: 0; margin-top: 1px; text-align: left; font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; cursor: pointer; }
+.paused-note:hover { color: var(--ink); text-decoration: underline; }
+/* the play button breathes while the simulation waits after an automatic pause */
+.btn.primary.nudge { animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
 .top-r { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .conn-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); flex: none; }
 .conn-dot.open { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 20%, transparent); }
 .conn-dot.closed { background: var(--crit); }
+.conn-warn { font-size: 11.5px; font-weight: 600; color: var(--crit); white-space: nowrap; }
 .live-badge { font-family: var(--f-mono); font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--ink-3); }
 .live-badge.on { background: var(--crit); color: #fff; border-color: var(--crit); }
 
@@ -342,6 +350,7 @@ pre.draft { white-space: pre-wrap; font-family: var(--f-mono); font-size: 11px; 
 .eq .body { fill: color-mix(in srgb, var(--accent) 10%, var(--surface)); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; transition: fill .4s, stroke .4s, stroke-width .15s; }
 .eq.cw .body { fill: color-mix(in srgb, var(--teal) 12%, var(--surface)); stroke: var(--teal); }
 .eq .blade { fill: var(--accent); }
+.eq .pad { fill: transparent; stroke: none; }
 .eq.cw .blade { fill: var(--teal); }
 .eq .tube { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 4 3; }
 .eq:not(.stopped) .tube { animation: flow 1.4s linear infinite; }
@@ -363,7 +372,7 @@ pre.draft { white-space: pre-wrap; font-family: var(--f-mono); font-size: 11px; 
 .eq .x { stroke: var(--trip); stroke-width: 3; stroke-linecap: round; }
 .eq .ring { fill: none; stroke: var(--crit); stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: ring 1.8s ease-out infinite; }
 @keyframes ring { from { opacity: .8; transform: scale(.75); } to { opacity: 0; transform: scale(1.25); } }
-.schem-tip { position: absolute; z-index: 5; width: 270px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 11px;
+.schem-tip { position: fixed; z-index: 70; width: 270px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 11px;
   box-shadow: 0 10px 30px rgba(15, 28, 42, .16); pointer-events: none; font-size: 12.5px; }
 
 /* ---------- data coverage timeline ---------- */
@@ -384,6 +393,16 @@ pre.draft { white-space: pre-wrap; font-family: var(--f-mono); font-size: 11px; 
 .cov-trip { top: 0; transform: translateX(-50%); color: var(--crit); font-weight: 700; font-size: 14px; line-height: 22px; text-shadow: 0 0 2px var(--surface); }
 .cov-tick { top: 0; font-size: 10.5px; color: var(--ink-3); border-left: 1px solid var(--line-2); padding-left: 3px; line-height: 16px; white-space: nowrap; }
 .cov-now { position: absolute; top: -4px; bottom: 16px; width: 2px; margin-left: -1px; background: var(--ink); opacity: .55; transition: left .25s linear; pointer-events: none; }
+
+/* ---------- opening video ---------- */
+.intro { position: fixed; inset: 0; z-index: 1000; background: #fff; display: grid; place-items: center; cursor: pointer; transition: opacity .6s ease; }
+.intro.out { opacity: 0; pointer-events: none; }
+/* the video sits centred at a modest size on the white page instead of filling the screen */
+.intro video { width: min(560px, 70vw); height: auto; aspect-ratio: 16 / 9; object-fit: contain; background: #fff; }
+.intro-skip { position: absolute; right: 24px; bottom: 24px; border: 1px solid rgba(15, 28, 42, .18); background: rgba(255, 255, 255, .8); color: #0f1c2a;
+  padding: 7px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; backdrop-filter: blur(4px); }
+.intro-skip:hover { background: #fff; border-color: rgba(15, 28, 42, .4); }
+html.intro-on, html.intro-on body { overflow: hidden; }
 
 /* ---------- toasts ---------- */
 .toasts { position: fixed; right: 16px; bottom: 16px; z-index: 50; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }

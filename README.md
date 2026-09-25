@@ -87,13 +87,13 @@ kecepatan (1 jam s/d 1 minggu per detik), dan skenario.
 3. **Monitor aset → PU-2101B atau KO-3201.** Tunjukkan tren condition monitoring dan garis proyeksi menuju batas trip, sinyal PI per jam,
    serta skor dan kontributor model AI.
 4. **Action Hub.** Isi nama, klik *Ack* dan *Buat WO*. Tunjukkan tenggat SLA dan kolom "skor lama" dibanding risiko baru dalam US$.
-5. **Skenario.** Pindah dari *Kenyataan* ke *SIGAP otomatis*. Untuk 5 kasus nyata, kerugian turun dari **US$2,58 jt** menjadi
+5. **Skenario.** Pindah dari *Real* ke *Otomatis*. Untuk 5 kasus nyata, kerugian turun dari **US$2,58 jt** menjadi
    **US$0,85 jt** (terhindar ±US$1,73 jt), karena intervensi terencana dijalankan sesuai SLA. Di mode *Manual*, Anda sendiri yang memutuskan
    kapan intervensi.
 6. **AI RCA Assistant.** Verifikasi parameter (G/CEK/NG), hipotesis akar masalah dengan bukti, insiden serupa, dan draf abnormality report
    yang bisa diunduh. Dengan kunci Claude aktif, klik *Buat analisis dengan Claude*.
 7. **Model AI.** Model dilatih hanya dari data normal. Tabel validasi menghitung seberapa awal peringatan muncul sebelum setiap trip
-   pada replay yang sedang berjalan (84–105 hari untuk kelima kasus di mode Kenyataan).
+   pada replay yang sedang berjalan (84–105 hari untuk kelima kasus di mode Real).
 8. **Data & sumber.** Garis waktu cakupan menunjukkan bulan data asli tiap aset dan bagian yang diisi dummy.
 
 Tombol **Ulang** mengembalikan simulasi ke 5 Jan 2026 dan menghapus semua tindakan.

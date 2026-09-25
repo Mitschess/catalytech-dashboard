@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fD, fHour, MODE_LABEL, Mode, STATUS_LABEL, UNIT_ORDER } from "./api";
 import { useLive } from "./live";
 import { BackIcon, evColor, FwdIcon, PauseIcon, PlayIcon } from "./components/ui";
@@ -52,8 +52,9 @@ export default function App() {
           <div className="top-in">
             <button className="btn icon ghost menu-btn" aria-label="Buka menu" onClick={() => setDrawer(true)}><MenuIcon /></button>
             <div className="top-title">{title}</div>
-            <SimControls />
+            <SimControls go={go} />
             <span className={`live-badge${snap?.running ? " on" : ""}`}>{snap?.running ? "● LIVE" : "JEDA"}</span>
+            {conn !== "open" && <span className="conn-warn">{conn === "connecting" ? "Menghubungkan…" : "Terputus · menyambung ulang…"}</span>}
             <span className={`conn-dot ${conn}`} title={conn === "open" ? "Terhubung ke server" : conn === "connecting" ? "Menghubungkan…" : "Terputus, mencoba lagi…"} />
           </div>
         </header>
@@ -95,8 +96,8 @@ function Sidebar({ route, go, collapsed, toggle }: { route: { page: Page; asset:
     <aside className="side" aria-label="Navigasi">
       <div className="side-head">
         <button className="brand" onClick={() => go("overview")} title="Catalytech SIGAP">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" strokeWidth="2" /><line x1="1.5" y1="16" x2="30.5" y2="16" stroke="currentColor" strokeWidth="1.4" /><text x="16" y="13" textAnchor="middle" fontSize="9" fontWeight="600" fontFamily="IBM Plex Mono, Consolas, monospace" fill="currentColor">AI</text><text x="16" y="25.5" textAnchor="middle" fontSize="7.5" fontFamily="IBM Plex Mono, Consolas, monospace" fill="currentColor">101</text></svg>
-          <span className="brand-t"><span className="brand-name">Catalytech <span>SIGAP</span></span><span className="brand-sub">Predictive Maintenance</span></span>
+          <img className="brand-full" src="/brand-full.png" alt="Catalytech" />
+          <img className="brand-icon" src="/brand-icon.png" alt="Catalytech" />
         </button>
         <button className="btn icon ghost collapse-btn" onClick={toggle} aria-label={collapsed ? "Lebarkan sidebar" : "Ciutkan sidebar"} title={collapsed ? "Lebarkan" : "Ciutkan"}><CollapseIcon open={!collapsed} /></button>
       </div>
@@ -131,31 +132,80 @@ function Sidebar({ route, go, collapsed, toggle }: { route: { page: Page; asset:
           </div>
         ))}
       </div>
-      <div className="side-foot">5 aset data panitia · <span className="src dummy">Dummy</span> = isian jam kosong</div>
     </aside>
   );
 }
 
-function SimControls() {
-  const { meta, snap, control, busy } = useLive();
-  const [drag, setDrag] = useState<number | null>(null);
+function SimControls({ go }: { go: (p: Page, a?: string | null) => void }) {
+  const { meta, snap, control, busy, pauseInfo } = useLive();
+  // Timeline slider. A local value is shown only while the slider is pressed, or for at most 3 s after a jump
+  // while the server replays; after that the date always follows the simulation clock, so it can never freeze.
+  const [local, setLocal] = useState<number | null>(null);
+  const localRef = useRef<number | null>(null);
+  const pressed = useRef(false);
+  const kbdTimer = useRef<number | undefined>(undefined);
+  const holdTimer = useRef<number | undefined>(undefined);
+  const nowRef = useRef(0);
+  nowRef.current = snap?.now ?? 0;
+  const show = (v: number | null) => { localRef.current = v; setLocal(v); };
+  const commit = useCallback((v: number | null) => {
+    clearTimeout(kbdTimer.current);
+    kbdTimer.current = undefined;
+    if (v == null) return;
+    if (v !== nowRef.current) control("seek", v);
+    clearTimeout(holdTimer.current);
+    holdTimer.current = window.setTimeout(() => { if (!pressed.current) show(null); }, 3000);
+  }, [control]);
+  const release = useCallback(() => {
+    if (!pressed.current) return;
+    pressed.current = false;
+    commit(localRef.current);
+  }, [commit]);
+  useEffect(() => {
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    window.addEventListener("blur", release);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+      window.removeEventListener("blur", release);
+    };
+  }, [release]);
+  // The jump has been replayed (new epoch): show the server clock again.
+  const epoch = snap?.epoch;
+  useEffect(() => { if (!pressed.current) { clearTimeout(holdTimer.current); show(null); } }, [epoch]);
+  useEffect(() => () => { clearTimeout(kbdTimer.current); clearTimeout(holdTimer.current); }, []);
   if (!meta || !snap) return <span className="sp" />;
-  const now = drag ?? snap.now;
-  const commit = (v: number) => { setDrag(null); if (v !== snap.now) control("seek", v); };
+  const now = local ?? snap.now;
+  const onSlide = (v: number) => {
+    show(v);
+    if (!pressed.current) {                 // keyboard: jump once the keys have been quiet for 0.4 s
+      clearTimeout(kbdTimer.current);
+      kbdTimer.current = window.setTimeout(() => commit(v), 400);
+    }
+  };
+  const atEnd = snap.now >= meta.nHours - 1;
+  const autoPaused = !snap.running && pauseInfo != null;
   const speed = (s: number) => (s === 1 ? "1 jam" : s < 24 ? `${s} jam` : s === 24 ? "1 hari" : s === 168 ? "1 minggu" : `${s / 24} hari`) + "/dtk";
   return (
     <>
       <div className="sim">
         <button className="btn icon" aria-label="Mundur 1 hari" title="Mundur 1 hari" onClick={() => control("seek", Math.max(0, snap.now - 24))}><BackIcon /></button>
-        <button className="btn icon primary" aria-label={snap.running ? "Jeda" : "Putar"} title={snap.running ? "Jeda" : "Putar"} onClick={() => control(snap.running ? "pause" : "play")}>{snap.running ? <PauseIcon /> : <PlayIcon />}</button>
+        <button className={`btn icon primary${autoPaused ? " nudge" : ""}`} aria-label={snap.running ? "Jeda" : "Putar"} title={snap.running ? "Jeda" : "Putar"} onClick={() => control(snap.running ? "pause" : "play")}>{snap.running ? <PauseIcon /> : <PlayIcon />}</button>
         <button className="btn icon" aria-label="Maju 1 hari" title="Maju 1 hari" onClick={() => control("step", 24)}><FwdIcon /></button>
         <div className="sim-date">{fD(now)}<small>{fHour(now)}</small></div>
       </div>
       <div className="scrub">
         <input type="range" min={0} max={meta.nHours - 1} step={1} value={now} aria-label="Tanggal simulasi"
-          onChange={(e) => setDrag(+e.target.value)} onPointerUp={(e) => commit(+(e.target as HTMLInputElement).value)}
-          onKeyUp={(e) => commit(+(e.target as HTMLInputElement).value)} />
-        {busy && <span className="busy">{busy}</span>}
+          onPointerDown={() => { pressed.current = true; clearTimeout(holdTimer.current); }}
+          onChange={(e) => onSlide(+e.target.value)} />
+        {busy ? <span className="busy">{busy}</span>
+          : autoPaused ? (
+            <button className="paused-note" onClick={() => pauseInfo!.ev?.assetId && go("monitor", pauseInfo!.ev.assetId)}
+              title="Simulasi berhenti otomatis karena ada alert baru. Tekan ▶ untuk lanjut, atau matikan 'Jeda di alert'. Klik untuk membuka asetnya.">
+              ⏸ Dijeda: {pauseInfo!.ev ? <><b style={{ color: evColor(pauseInfo!.ev.type) }}>{pauseInfo!.ev.assetId} {STATUS_LABEL[pauseInfo!.ev.type] ?? pauseInfo!.ev.type}</b> · tekan ▶ untuk lanjut</> : "alert baru · tekan ▶ untuk lanjut"}
+            </button>)
+          : atEnd ? <span className="busy">Akhir timeline · geser ke kiri atau Ulang</span> : null}
       </div>
       <div className="top-r">
         <select className="sel" aria-label="Kecepatan simulasi" value={snap.speed} onChange={(e) => control("speed", +e.target.value)}>

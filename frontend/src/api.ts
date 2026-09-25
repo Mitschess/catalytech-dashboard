@@ -118,7 +118,7 @@ export function usd(k: number | null | undefined): string {
 export const days = (from: number, to: number) => Math.round((to - from) / 24);
 export const STATUS_RANK: Record<Status, number> = { TRIP: 6, CRITICAL: 5, ALARM: 4, MAINT: 3, WATCH: 2, PULIH: 1, NORMAL: 0, NODATA: -1 };
 export const STATUS_LABEL: Record<string, string> = { NODATA: "Belum ada data", NORMAL: "Normal", WATCH: "Watch", ALARM: "Alarm", CRITICAL: "Critical", TRIP: "Trip", MAINT: "Intervensi", PULIH: "Pulih", DATA: "Kualitas data", MODEL: "Model AI" };
-export const MODE_LABEL: Record<Mode, string> = { reality: "Kenyataan", auto: "SIGAP otomatis", manual: "Manual" };
+export const MODE_LABEL: Record<Mode, string> = { reality: "Real", auto: "SIGAP otomatis", manual: "Manual" };
 export function cssVar(name: string): string { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
 /** Units in process order, as drawn in the site schematic and the sidebar. */

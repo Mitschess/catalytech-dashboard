@@ -1,4 +1,4 @@
-import { KeyboardEvent, MouseEvent, useRef, useState } from "react";
+import { KeyboardEvent, MouseEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AssetState, fDs, nf, STATUS_LABEL } from "../api";
 import { useLive } from "../live";
 import { Prio, StatusChip } from "./ui";
@@ -92,8 +92,11 @@ function Symbol({ kind }: { kind: Kind }) {
     <>
       <rect className="body" x={6} y={-24} width={14} height={10} />
       <circle className="body" r={20} />
+      {/* The invisible pad makes the 3-blade impeller's box symmetric, so CSS rotates it about the shaft, not off-centre. */}
       <g className="rot">
+        <circle className="pad" r={16} />
         {[0, 120, 240].map((a) => <path key={a} className="blade" transform={`rotate(${a})`} d="M0 0 C3 -5 9 -9 14 -6 C8 -4 4 -1 0 0 Z" />)}
+        <circle className="blade" r={3} />
       </g>
     </>
   );
@@ -101,24 +104,39 @@ function Symbol({ kind }: { kind: Kind }) {
 
 export function ProcessSchematic({ onOpen }: { onOpen: (id: string) => void }) {
   const { snap, assetMeta } = useLive();
-  const wrap = useRef<HTMLDivElement>(null);
+  const tipEl = useRef<HTMLDivElement>(null);
+  // Anchor point in viewport coordinates; the tooltip is position: fixed, so it never enlarges the scrollable diagram box.
   const [tip, setTip] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const byId = new Map(snap!.assets.map((a) => [a.id, a]));
   const unacked = new Set(snap!.alerts.filter((a) => a.open && !a.ack && a.level === 3).map((a) => a.assetId));
 
   const place = (id: string, e: MouseEvent | KeyboardEvent | null, el?: Element) => {
-    const w = wrap.current!, box = w.getBoundingClientRect();
-    const px = e && "clientX" in e ? e.clientX : el ? el.getBoundingClientRect().right : 0;
-    const py = e && "clientY" in e ? e.clientY : el ? el.getBoundingClientRect().top : 0;
-    // Keep the 280px tooltip inside the visible part of the diagram.
-    const x = Math.min(px - box.left + 14, box.width - 296) + w.scrollLeft;
-    setTip({ id, x: Math.max(w.scrollLeft + 4, x), y: Math.max(4, py - box.top - 10) });
+    const r = el?.getBoundingClientRect();
+    setTip({ id, x: e && "clientX" in e ? e.clientX : r ? r.right : 0, y: e && "clientY" in e ? e.clientY : r ? r.top : 0 });
   };
+  // Place next to the pointer; flip to the left / above when it would leave the window.
+  useLayoutEffect(() => {
+    const t = tipEl.current;
+    if (!tip || !t) { setPos(null); return; }
+    const m = 8, gap = 14, w = t.offsetWidth, h = t.offsetHeight;
+    let left = tip.x + gap, top = tip.y + gap;
+    if (left + w > window.innerWidth - m) left = tip.x - gap - w;
+    if (top + h > window.innerHeight - m) top = tip.y - gap - h;
+    setPos({ left: Math.max(m, left), top: Math.max(m, top) });
+  }, [tip]);
+  // A fixed tooltip would drift away from the machine while the page scrolls: hide it instead.
+  useEffect(() => {
+    if (!tip) return;
+    const hide = () => setTip(null);
+    window.addEventListener("scroll", hide, { passive: true, capture: true });
+    return () => window.removeEventListener("scroll", hide, { capture: true });
+  }, [tip]);
   const ts = tip ? byId.get(tip.id) : undefined;
   const tm = tip ? assetMeta(tip.id) : undefined;
 
   return (
-    <div className="schem-wrap" ref={wrap} onMouseLeave={() => setTip(null)}>
+    <div className="schem-wrap" onMouseLeave={() => setTip(null)}>
       <svg className="schem" viewBox="0 14 1180 366" role="group" aria-label="Skematik proses site dengan status lima aset yang dipantau">
         {UNITS.map((u) => (
           <g key={u.code} className={`unitbox${u.code === "NUP" ? " nup" : ""}`}>
@@ -162,7 +180,7 @@ export function ProcessSchematic({ onOpen }: { onOpen: (id: string) => void }) {
         })}
       </svg>
       {tip && ts && tm && (
-        <div className="schem-tip" style={{ left: tip.x, top: tip.y }} role="tooltip">
+        <div className="schem-tip" ref={tipEl} style={pos ? { left: pos.left, top: pos.top } : { left: -9999, top: 0 }} role="tooltip">
           <div className="row" style={{ gap: 6, marginBottom: 4 }}><b className="mono">{tm.id}</b><span className="muted small">{tm.short}</span></div>
           <div className="row" style={{ gap: 6, marginBottom: 4 }}><StatusChip status={ts.status} /><Prio p={ts.prio} /><span className="small">health <b>{ts.health ?? "–"}</b></span></div>
           {ts.reason && <div className="small" style={{ marginBottom: 4 }}>{ts.reason}</div>}
