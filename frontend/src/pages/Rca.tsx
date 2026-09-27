@@ -148,7 +148,7 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
 
             <Panel title={<>Hipotesis akar masalah <Info text="Persentase = kecocokan bukti terhadap pustaka mode kegagalan (4M+1E). Chip bukti: 0% = di baseline, 100% = mencapai batas alarm/desain." /></>}>
               {hyps.length === 0 ? <div className="empty">Belum ada pustaka hipotesis untuk jenis aset ini.</div> : hyps.map((h, i) => (
-                <div className={`hyp${i === 0 ? " top" : ""}`} key={h.id}>
+                <div className={`hyp${i === 0 ? " best" : ""}`} key={h.id}>
                   <div className="hh"><b>{i + 1}. {h.title}</b><span className="conf">{nf(h.score * 100)}%</span></div>
                   <div className="chips">
                     <span className="evc">mode: {h.mech}</span>
@@ -165,6 +165,43 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
                     : <details className="more" style={{ marginTop: 0 }}><summary>Langkah & tindakan</summary><div><Steps checks={h.checks} actions={h.actions} /></div></details>}
                 </div>
               ))}
+            </Panel>
+          </div>
+
+          <div className="stack">
+            <Panel title={<>Analisis asisten AI <Info text="Asisten membaca kondisi parameter, skor AI, hipotesis, insiden serupa dan laporan RCA terbit, sesuai waktu simulasi saat ditanya. Jawaban wajib diverifikasi engineer." /></>}
+                   sub={llm.available ? `${llm.model}${llm.provider === "local" ? " (lokal)" : ""}` : "belum aktif"}>
+              {!llm.available ? (
+                <div className="callout"><b>Asisten AI belum aktif.</b> {llm.detail || "Periksa pengaturan LLM di backend/.env, lalu jalankan ulang server."}</div>
+              ) : (
+                <>
+                  {turns.length === 0 && (
+                    <div><button className="btn primary" onClick={() => ask(null)} disabled={streaming}>Buat analisis dengan AI</button></div>
+                  )}
+                  {turns.length > 0 && (
+                    <div className="grid" style={{ gap: 8, maxHeight: 620, overflowY: "auto" }}>
+                      {turns.map((t, i) => t.role === "user"
+                        ? <div key={i} className="bubble u">{t.content}</div>
+                        : <div key={i} className="ai-out">{t.content ? <Markdown text={t.content} /> : <span className="muted">Asisten sedang menganalisis…</span>}</div>)}
+                      <div ref={chatEnd} />
+                    </div>
+                  )}
+                  {aiErr && <div className="callout" style={{ marginTop: 8, borderColor: "var(--crit)" }}>{aiErr}</div>}
+                  {turns.length > 0 && (
+                    <form className="ask" onSubmit={(e) => { e.preventDefault(); if (q.trim()) ask(q.trim()); }}>
+                      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tanya lanjutan, mis. apa yang dicek pertama di lapangan?" aria-label="Pertanyaan lanjutan" disabled={streaming} maxLength={2000} />
+                      <button className="btn primary" type="submit" disabled={streaming || !q.trim()}>Kirim</button>
+                      {streaming ? <button className="btn" type="button" onClick={() => ctrl.current?.abort()}>Stop</button>
+                        : <button className="btn ghost" type="button" onClick={() => { setTurns([]); setAiErr(null); }}>Ulang</button>}
+                    </form>
+                  )}
+                </>
+              )}
+            </Panel>
+
+            <Panel title="Draf abnormality report" sub="format RCA-F-0075-02" right={
+              <div className="row" style={{ gap: 4 }}><button className="btn sm" onClick={copyDraft}>Salin</button><button className="btn sm" onClick={downloadDraft}>Unduh .txt</button></div>}>
+              <pre className="draft">{data.draft}</pre>
             </Panel>
 
             <Panel title={<>Insiden serupa <Info text="Dari Incident Database, hanya insiden sebelum waktu simulasi." /></>}>
@@ -196,43 +233,6 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
               )}
             </Panel>
           </div>
-
-          <div className="stack">
-            <Panel title={<>Analisis asisten AI <Info text="Asisten membaca kondisi parameter, skor AI, hipotesis, insiden serupa dan laporan RCA terbit, sesuai waktu simulasi saat ditanya. Jawaban wajib diverifikasi engineer." /></>}
-                   sub={llm.available ? `${llm.model}${llm.provider === "local" ? " (lokal)" : ""}` : "belum aktif"}>
-              {!llm.available ? (
-                <div className="callout"><b>Asisten AI belum aktif.</b> {llm.detail || "Periksa pengaturan LLM di backend/.env, lalu jalankan ulang server."}</div>
-              ) : (
-                <>
-                  {turns.length === 0 && (
-                    <div><button className="btn primary" onClick={() => ask(null)} disabled={streaming}>Buat analisis dengan AI</button></div>
-                  )}
-                  {turns.length > 0 && (
-                    <div className="grid" style={{ gap: 8, maxHeight: 620, overflowY: "auto" }}>
-                      {turns.map((t, i) => t.role === "user"
-                        ? <div key={i} className="bubble u">{t.content}</div>
-                        : <div key={i} className="ai-out">{t.content ? <Markdown text={t.content} /> : <span className="muted">Claude sedang menganalisis…</span>}</div>)}
-                      <div ref={chatEnd} />
-                    </div>
-                  )}
-                  {aiErr && <div className="callout" style={{ marginTop: 8, borderColor: "var(--crit)" }}>{aiErr}</div>}
-                  {turns.length > 0 && (
-                    <form className="ask" onSubmit={(e) => { e.preventDefault(); if (q.trim()) ask(q.trim()); }}>
-                      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tanya lanjutan, mis. apa yang dicek pertama di lapangan?" aria-label="Pertanyaan lanjutan" disabled={streaming} maxLength={2000} />
-                      <button className="btn primary" type="submit" disabled={streaming || !q.trim()}>Kirim</button>
-                      {streaming ? <button className="btn" type="button" onClick={() => ctrl.current?.abort()}>Stop</button>
-                        : <button className="btn ghost" type="button" onClick={() => { setTurns([]); setAiErr(null); }}>Ulang</button>}
-                    </form>
-                  )}
-                </>
-              )}
-            </Panel>
-
-            <Panel title="Draf abnormality report" sub="format RCA-F-0075-02" right={
-              <div className="row" style={{ gap: 4 }}><button className="btn sm" onClick={copyDraft}>Salin</button><button className="btn sm" onClick={downloadDraft}>Unduh .txt</button></div>}>
-              <pre className="draft">{data.draft}</pre>
-            </Panel>
-          </div>
         </div>
       )}
     </>
@@ -241,7 +241,7 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
 
 function Steps({ checks, actions }: { checks: string[]; actions: string[] }) {
   return (
-    <div className="grid g2" style={{ gap: 10 }}>
+    <div className="grid g2 steps" style={{ gap: 14 }}>
       <div><div className="xs muted">Verifikasi</div><ul className="clean small">{checks.map((c) => <li key={c}>{c}</li>)}</ul></div>
       <div><div className="xs muted">Tindakan</div><ul className="clean small">{actions.map((c) => <li key={c}>{c}</li>)}</ul></div>
     </div>

@@ -308,11 +308,18 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 
 /* ---------- RCA ---------- */
 .rca-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
-.hyp { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; display: grid; gap: 5px; background: var(--surface); }
-.hyp + .hyp { margin-top: 6px; }
-.hyp.top { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 3%, var(--surface)); }
+/* NOTE: the strongest hypothesis uses .best, never .top — .top is the sticky page header. */
+.hyp { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 7px; background: var(--surface); }
+.hyp + .hyp { margin-top: 8px; }
+.hyp.best { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 3%, var(--surface)); }
 .hyp .hh { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
-.conf { font-family: var(--f-display); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent); }
+.hyp .hh b { font-size: 13.5px; line-height: 1.35; }
+.hyp { container-type: inline-size; }
+.hyp .steps { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 1px; }
+.hyp .steps .xs.muted { text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+/* two columns of bullets get unreadable in a narrow RCA column */
+@container (max-width: 430px) { .hyp .steps { grid-template-columns: minmax(0, 1fr); gap: 8px !important; } }
+.conf { font-family: var(--f-display); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent); flex: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .evc { font-size: 10.5px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; line-height: 1.7; }
 .evc.hot { border-color: var(--alarm); background: color-mix(in srgb, var(--alarm) 10%, var(--surface)); color: var(--ink); }
