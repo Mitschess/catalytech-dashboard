@@ -1,5 +1,9 @@
 {
-  "dependencies": {
-    "claude": "^0.1.1"
+  "name": "catalytech-dashboard-root",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "install:frontend": "npm --prefix frontend install"
   }
 }

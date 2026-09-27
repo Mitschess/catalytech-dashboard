@@ -198,13 +198,14 @@ export default function Rca({ assetId, go }: { assetId: string | null; go: (p: P
           </div>
 
           <div className="stack">
-            <Panel title={<>Analisis Claude <Info text="Claude membaca kondisi parameter, skor AI, hipotesis, insiden serupa dan laporan RCA terbit, sesuai waktu simulasi saat ditanya. Jawaban wajib diverifikasi engineer." /></>} sub={llm.available ? llm.model : "belum aktif"}>
+            <Panel title={<>Analisis asisten AI <Info text="Asisten membaca kondisi parameter, skor AI, hipotesis, insiden serupa dan laporan RCA terbit, sesuai waktu simulasi saat ditanya. Jawaban wajib diverifikasi engineer." /></>}
+                   sub={llm.available ? `${llm.model}${llm.provider === "local" ? " (lokal)" : ""}` : "belum aktif"}>
               {!llm.available ? (
-                <div className="callout"><b>Asisten Claude belum aktif.</b> Isi <span className="mono">ANTHROPIC_API_KEY</span> di <span className="mono">backend/.env</span>, lalu jalankan ulang server.</div>
+                <div className="callout"><b>Asisten AI belum aktif.</b> {llm.detail || "Periksa pengaturan LLM di backend/.env, lalu jalankan ulang server."}</div>
               ) : (
                 <>
                   {turns.length === 0 && (
-                    <div><button className="btn primary" onClick={() => ask(null)} disabled={streaming}>Buat analisis dengan Claude</button></div>
+                    <div><button className="btn primary" onClick={() => ask(null)} disabled={streaming}>Buat analisis dengan AI</button></div>
                   )}
                   {turns.length > 0 && (
                     <div className="grid" style={{ gap: 8, maxHeight: 620, overflowY: "auto" }}>

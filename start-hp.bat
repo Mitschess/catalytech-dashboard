@@ -44,8 +44,8 @@ echo     https://....trycloudflare.com
 echo  lalu buka alamat itu di browser HP. Alamat berubah setiap kali tunnel dijalankan.
 echo.
 echo  PERHATIAN: siapa pun yang tahu alamat itu bisa membuka dan mengendalikan dashboard (belum ada login).
-echo  Bagikan hanya ke tim, dan tutup jendela ini setelah selesai. Jika ANTHROPIC_API_KEY diisi,
-echo  orang lain yang membuka alamat itu juga bisa memakai kuota Claude Anda.
+echo  Bagikan hanya ke tim, dan tutup jendela ini setelah selesai. Jika asisten RCA aktif, orang lain
+echo  yang membuka alamat itu juga ikut memakai GPU komputer ini, jadi dashboard bisa terasa lambat.
 echo.
 start "Catalytech SIGAP - server" cmd /k call start.bat
 timeout /t 8 /nobreak >nul

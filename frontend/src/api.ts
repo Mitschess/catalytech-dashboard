@@ -38,9 +38,11 @@ export interface IncidentSummary {
   byStatus: { k: string; n: number; loss: number }[];
   backlog: { id: number; tag: string; title: string; plant: string; status: string; prerisk: string; score: number; loss: number; overdueDays: number | null }[];
 }
+/** RCA assistant: a local Ollama/LM Studio server, or Anthropic's hosted API. */
+export interface LlmStatus { available: boolean; model: string; provider: "local" | "claude"; endpoint?: string; detail?: string }
 export interface Meta {
   simStart: string; nHours: number; speeds: number[]; defaultStart: number; slaHours: Record<string, number>; assets: AssetMeta[];
-  llm: { available: boolean; model: string }; incidents: IncidentSummary;
+  llm: LlmStatus; incidents: IncidentSummary;
 }
 /** real[i] = 1 when hour h[i] holds real competition data, 0 when it is the labelled DUMMY fill. */
 export interface Samples { assetId: string; h: number[]; values: (number | null)[][]; t2: (number | null)[]; spe: (number | null)[]; ratio: (number | null)[]; code: number[]; health: (number | null)[]; real: number[] }
@@ -65,7 +67,7 @@ export interface Hypothesis { id: string; title: string; mech: string; comp: str
 export interface SimilarInc { score: number; id: number; tag: string; title: string; plant: string; type: string; comp: string; fm: string; date: string; status: string; loss: number }
 export interface RcaView {
   assetId: string; now: number; status: Status; condition: CondRow[]; hypotheses: Hypothesis[]; similar: SimilarInc[];
-  lessons: { ar: string; tag: string; rootCause: string; actions: string[] }[]; draft: string; dq: string[]; llm: { available: boolean; model: string };
+  lessons: { ar: string; tag: string; rootCause: string; actions: string[] }[]; draft: string; dq: string[]; llm: LlmStatus;
 }
 
 export async function getJSON<T>(path: string): Promise<T> {

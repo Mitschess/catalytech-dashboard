@@ -7,7 +7,6 @@ import math
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-import anthropic
 import numpy as np
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -112,6 +111,7 @@ async def lifespan(app: FastAPI):
     S.engine = PlantEngine(assets, S.store)
     S.engine.advance(h_of(DEFAULT_START), pause=False)
     S.engine.running = AUTOPLAY
+    await llm.probe()
     task = asyncio.create_task(sim_loop())
     yield
     task.cancel()
@@ -325,8 +325,10 @@ def _sse(obj: dict) -> str:
 async def ask(aid: str, body: AskBody):
     if aid not in S.engine.by_id:
         raise HTTPException(404, "Aset tidak ditemukan")
-    if not llm.status()["available"]:
-        raise HTTPException(503, "Kredensial Claude belum diatur. Set ANTHROPIC_API_KEY lalu jalankan ulang server.")
+    await llm.probe()
+    st = llm.status()
+    if not st["available"]:
+        raise HTTPException(503, st["detail"] or "Asisten AI belum aktif.")
     async with S.lock:
         ctx = rca.llm_context(S.engine, S.incidents, aid)
     msgs = [{"role": "user", "content": f"KONTEKS DARI DASHBOARD:\n{ctx}\n\nTUGAS: {rca.TASK}"}]
@@ -341,16 +343,8 @@ async def ask(aid: str, body: AskBody):
             async for chunk in llm.stream_answer(rca.RULES, msgs):
                 yield _sse({"text": chunk})
             yield _sse({"done": True})
-        except anthropic.AuthenticationError:
-            yield _sse({"error": "Kredensial Claude tidak valid. Periksa ANTHROPIC_API_KEY."})
-        except anthropic.PermissionDeniedError:
-            yield _sse({"error": "Kredensial tidak punya akses ke model ini."})
-        except anthropic.RateLimitError:
-            yield _sse({"error": "Terlalu banyak permintaan ke Claude. Coba lagi sebentar lagi."})
-        except anthropic.APIStatusError as e:
-            yield _sse({"error": f"Claude API mengembalikan error {e.status_code}. Coba lagi."})
-        except anthropic.APIConnectionError:
-            yield _sse({"error": "Tidak bisa terhubung ke Claude API. Periksa koneksi internet."})
+        except llm.LLMError as e:
+            yield _sse({"error": str(e)})
 
     return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 

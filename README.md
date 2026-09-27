@@ -67,11 +67,22 @@ cd frontend
 npm run dev        # http://localhost:5173, API dan WebSocket diteruskan ke port 8000
 ```
 
-### Mengaktifkan asisten Claude (opsional)
+### Mengaktifkan asisten RCA (opsional)
 
-Salin `backend/.env.example` menjadi `backend/.env`, isi `ANTHROPIC_API_KEY`, lalu jalankan ulang server.
-Tanpa kunci ini semua fitur lain tetap berjalan; hanya tombol analisis Claude di halaman AI RCA Assistant yang nonaktif.
-Jangan bagikan file `.env`.
+Asisten berjalan **di komputer sendiri** lewat [Ollama](https://ollama.com), jadi data proses tidak keluar dari jaringan
+dan tidak ada kunci API maupun kuota.
+
+```bash
+ollama pull qwen2.5:3b      # ~1,9 GB; muat penuh di GPU 4 GB
+```
+
+Server mendeteksi Ollama di `http://127.0.0.1:11434` secara otomatis. Untuk mengubah model, alamat server, atau
+memakai Anthropic API sebagai gantinya, salin `backend/.env.example` menjadi `backend/.env` dan sesuaikan
+`CATALYTECH_LLM_MODEL`, `CATALYTECH_LLM_BASE_URL`, atau `CATALYTECH_LLM_PROVIDER=claude`.
+
+Tanpa asisten ini semua fitur lain tetap berjalan; hanya tombol analisis di halaman AI RCA Assistant yang nonaktif.
+Model kecil (3B) cukup untuk merangkum, tetapi penalarannya terbatas, jadi jawabannya wajib diverifikasi engineer.
+Untuk kualitas lebih baik, pakai `qwen2.5:7b` (butuh ±8 GB VRAM) atau `qwen2.5:14b` (±16 GB).
 
 ---
 
@@ -91,7 +102,7 @@ kecepatan (1 jam s/d 1 minggu per detik), dan skenario.
    **US$0,85 jt** (terhindar ±US$1,73 jt), karena intervensi terencana dijalankan sesuai SLA. Di mode *Manual*, Anda sendiri yang memutuskan
    kapan intervensi.
 6. **AI RCA Assistant.** Verifikasi parameter (G/CEK/NG), hipotesis akar masalah dengan bukti, insiden serupa, dan draf abnormality report
-   yang bisa diunduh. Dengan kunci Claude aktif, klik *Buat analisis dengan Claude*.
+   yang bisa diunduh. Dengan Ollama aktif, klik *Buat analisis dengan AI*.
 7. **Model AI.** Model dilatih hanya dari data normal. Tabel validasi menghitung seberapa awal peringatan muncul sebelum setiap trip
    pada replay yang sedang berjalan (84–105 hari untuk kelima kasus di mode Real).
 8. **Data & sumber.** Garis waktu cakupan menunjukkan bulan data asli tiap aset dan bagian yang diisi dummy.
@@ -122,7 +133,7 @@ Navigasi ada di **sidebar kiri**: menu halaman dan daftar aset per unit dengan s
 | Batas & tren per jam | Batas alarm/trip (rata-rata 6 jam), drift > 10% selama 24 jam, tren harian kuadratik | Tidak (baseline 7 hari pertama) |
 | Condition monitoring | Tren kuadratik 8 pembacaan mingguan; P2 bila prediksi trip ≤ 45 hari, P1 bila ≤ 14 hari | Tidak (baseline 4 pembacaan) |
 | AI anomali (MSPC) | PCA + Hotelling T² + SPE, batas 99,9 persentil; P2 bila > 1× selama 3 jam, P1 bila > 5× dan dikonfirmasi lapis lain | Ya, data normal saja (336 jam) |
-| Asisten RCA | Claude membaca konteks dashboard, tanpa fine-tuning | Tidak |
+| Asisten RCA | LLM lokal (Ollama) membaca konteks dashboard, tanpa fine-tuning | Tidak |
 
 Semua pemrosesan bersifat kausal: pada jam simulasi *h*, sistem hanya memakai data sampai *h*.
 
@@ -140,7 +151,7 @@ catalytech-dashboard/
 │   │   ├── analytics/         mspc.py (model AI), rules.py (batas, tren, kualitas data)
 │   │   ├── sources/           competition.py (data panitia + isian dummy), historian.py (simulated historian)
 │   │   ├── rca.py             hipotesis, insiden serupa, draf laporan
-│   │   ├── llm.py             integrasi Claude (streaming)
+│   │   ├── llm.py             integrasi LLM: Ollama lokal atau Claude (streaming)
 │   │   └── store.py           SQLite: acknowledge, work order, intervensi manual
 │   ├── data/source/           salinan file panitia
 │   └── tests/                 smoke_test.py (mesin), api_test.py (API + WebSocket, butuh server berjalan)

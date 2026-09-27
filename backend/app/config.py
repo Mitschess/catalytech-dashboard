@@ -43,4 +43,12 @@ MSPC_TRAIN = 336         # two weeks of clean running (DUMMY fill built from eac
 # SLA per priority level, in hours.
 SLA_HOURS = {3: 24, 2: 168, 1: 168}
 
-LLM_MODEL = os.getenv("CATALYTECH_LLM_MODEL", "claude-opus-5")
+# RCA assistant. "local" talks to an OpenAI-compatible server (Ollama, LM Studio) so no data
+# leaves the plant network; "claude" uses Anthropic's hosted API and needs ANTHROPIC_API_KEY.
+LLM_PROVIDER = os.getenv("CATALYTECH_LLM_PROVIDER", "local").strip().lower()
+_DEFAULT_MODEL = "qwen2.5:3b" if LLM_PROVIDER == "local" else "claude-opus-5"
+LLM_MODEL = os.getenv("CATALYTECH_LLM_MODEL", _DEFAULT_MODEL)
+LLM_BASE_URL = os.getenv("CATALYTECH_LLM_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/")
+# Small local models answer slowly and ramble, so cap the answer harder than a hosted model.
+LLM_MAX_TOKENS = int(os.getenv("CATALYTECH_LLM_MAX_TOKENS", "1500" if LLM_PROVIDER == "local" else "16000"))
+LLM_TIMEOUT = float(os.getenv("CATALYTECH_LLM_TIMEOUT", "300"))

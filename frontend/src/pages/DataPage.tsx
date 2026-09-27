@@ -27,7 +27,7 @@ const API: [string, string, string][] = [
   ["PATCH", "/api/workorders/{id}", "Ubah status WO {status: Open | Dikerjakan | Selesai}"],
   ["POST", "/api/assets/{id}/intervene", "Jadwalkan intervensi terencana (mode Manual)"],
   ["GET", "/api/rca/{id}", "Verifikasi parameter, hipotesis, insiden serupa, draf laporan"],
-  ["POST", "/api/rca/{id}/ask", "Analisis Claude (Server-Sent Events)"],
+  ["POST", "/api/rca/{id}/ask", "Analisis asisten AI (Server-Sent Events)"],
   ["GET", "/api/models", "Status model AI per aset"],
   ["POST", "/api/models/{id}/retrain", "Latih ulang model dari data normal terbaru {hours}"],
   ["GET", "/api/capa", "Tindakan CAPA dari laporan RCA yang sudah terbit"],

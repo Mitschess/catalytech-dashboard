@@ -9,7 +9,7 @@ const LAYERS: [string, string, string, string][] = [
   ["2. Batas & tren per jam", "Batas alarm/trip pada rata-rata 6 jam, drift > 10% dari baseline selama 24 jam, dan tren harian kuadratik yang memproyeksikan tanggal melewati batas trip.", "Tidak", "Baseline otomatis dari 7 hari operasi pertama"],
   ["3. Condition monitoring mingguan", "Pembacaan rute (vibrasi, oli, suhu bearing). Tren kuadratik 8 pembacaan terakhir memberi prediksi tanggal trip dan alert P2 (≤ 45 hari) atau P1 (≤ 14 hari).", "Tidak", "Baseline dari 4 pembacaan awal"],
   ["4. AI anomali (MSPC)", "PCA + Hotelling T² + SPE. Belajar pola operasi normal lalu menandai data yang jauh dari pola itu (T²) atau yang merusak hubungan antar-tag (SPE).", "Ya, data normal saja", "336 jam operasi normal, tanpa contoh kegagalan"],
-  ["5. Asisten RCA (Claude)", "Membaca kondisi, skor AI, pustaka mode kegagalan, insiden serupa dan laporan RCA terbit, lalu menulis analisis probable root cause.", "Tidak (tanpa fine-tuning)", "Konteks dari dashboard pada saat ditanya"],
+  ["5. Asisten RCA (LLM lokal)", "Membaca kondisi, skor AI, pustaka mode kegagalan, insiden serupa dan laporan RCA terbit, lalu menulis analisis probable root cause. Model jalan di jaringan sendiri lewat Ollama, jadi data proses tidak keluar.", "Tidak (tanpa fine-tuning)", "Konteks dari dashboard pada saat ditanya"],
 ];
 
 export default function Models({ go }: { go: (p: Page, a?: string | null) => void }) {
